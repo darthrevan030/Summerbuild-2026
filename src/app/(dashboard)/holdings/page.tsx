@@ -134,15 +134,22 @@ export default function HoldingsPage() {
   const [refreshMsg, setRefreshMsg] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // TODO: implement handleRefresh
-  // Call refreshHoldingPrices() — it returns { refreshed: N, skipped: M }
-  // Show a loading state while it runs, then a brief success/error message.
-  // After success, call router.refresh() to re-run the server component and
-  // pick up the updated prices from Supabase.
-  // Trade-offs to consider: what message do you show for skipped > 0? What
-  // happens if the call throws (e.g. network error, not logged in)?
   async function handleRefresh() {
-    // your implementation here (~6 lines)
+    setRefreshing(true);
+    setRefreshMsg("");
+    try {
+      const { refreshed, skipped } = await refreshHoldingPrices();
+      if (refreshed > 0) {
+        setRefreshMsg(`Updated ${refreshed} holding${refreshed > 1 ? "s" : ""}${skipped > 0 ? ` · ${skipped} already fresh` : ""}`);
+        router.refresh();
+      } else {
+        setRefreshMsg("All prices up to date");
+      }
+    } catch {
+      setRefreshMsg("Refresh failed");
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   // Keyboard shortcut: "/" focuses search
