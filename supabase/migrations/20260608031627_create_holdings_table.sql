@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS holdings (
+  id               uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id          text        NOT NULL DEFAULT 'demo',
+  ticker           text        NOT NULL,
+  name             text        NOT NULL,
+  asset_type       text        NOT NULL,
+  broker           text        NOT NULL DEFAULT '',
+  strategy         text        NOT NULL DEFAULT '',
+  units            numeric     NOT NULL,
+  currency         text        NOT NULL DEFAULT 'SGD',
+  flag             text        NOT NULL DEFAULT '🌐',
+  icon             text        NOT NULL DEFAULT 'briefcase',
+  buy_price        numeric     NOT NULL,
+  buy_date         date        NOT NULL,
+  buy_fx_rate      numeric     NOT NULL DEFAULT 1.0,
+  current_price    numeric     NOT NULL DEFAULT 0,
+  current_fx_rate  numeric     NOT NULL DEFAULT 1.0,
+  spark_data       jsonb       NOT NULL DEFAULT '[]'::jsonb,
+  notes            text,
+  created_at       timestamptz DEFAULT now(),
+  updated_at       timestamptz DEFAULT now()
+);
