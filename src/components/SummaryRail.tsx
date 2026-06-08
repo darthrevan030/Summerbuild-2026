@@ -2,11 +2,11 @@
 
 import { Donut } from "@/components/charts/Donut";
 import { Legend } from "@/components/charts/Legend";
-import { sgdSigned, pct } from "@/lib/formatters";
+import { pct } from "@/lib/formatters";
 import { usePortfolio } from "@/context/portfolio";
 
 export function SummaryRail() {
-  const { hero, assetAllocation } = usePortfolio();
+  const { hero, assetAllocation, fmtSigned } = usePortfolio();
   const top = assetAllocation[0];
   const fxUp = hero.fxImpact >= 0;
   const dayUp = hero.dayChange >= 0;
@@ -33,17 +33,17 @@ export function SummaryRail() {
       <div className="sm-metrics">
         <div className="sm-metric">
           <span className="ui muted xs">Total Gain</span>
-          <span className="mono sm-v" style={{ color: "var(--gain)" }}>{sgdSigned(hero.totalGain)}</span>
+          <span className="mono sm-v" style={{ color: "var(--gain)" }}>{fmtSigned(hero.totalGain)}</span>
           <span className="mono sm-sub" style={{ color: "var(--gain)" }}>{pct(hero.totalGainPct)}</span>
         </div>
         <div className="sm-metric">
           <span className="ui muted xs">FX Impact</span>
-          <span className="mono sm-v" style={{ color: fxUp ? "var(--fx-positive)" : "var(--fx-negative)" }}>{sgdSigned(hero.fxImpact)}</span>
+          <span className="mono sm-v" style={{ color: fxUp ? "var(--fx-positive)" : "var(--fx-negative)" }}>{fmtSigned(hero.fxImpact)}</span>
           <span className="mono sm-sub" style={{ color: fxUp ? "var(--fx-positive)" : "var(--fx-negative)" }}>{pct(hero.fxPct)}</span>
         </div>
         <div className="sm-metric">
           <span className="ui muted xs">Today</span>
-          <span className="mono sm-v" style={{ color: dayUp ? "var(--gain)" : "var(--loss)" }}>{sgdSigned(hero.dayChange)}</span>
+          <span className="mono sm-v" style={{ color: dayUp ? "var(--gain)" : "var(--loss)" }}>{fmtSigned(hero.dayChange)}</span>
           <span className="mono sm-sub" style={{ color: dayUp ? "var(--gain)" : "var(--loss)" }}>{pct(hero.dayPct)}</span>
         </div>
       </div>

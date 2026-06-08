@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useState, useCallback } from "react";
 import type { HoldingRow } from "@/types/holding";
 import type {
   HeroStats,
@@ -11,13 +11,7 @@ import type {
   PortfolioSeriesPoint,
   FxSeriesPoint,
 } from "@/types/portfolio";
-
-export const FX_COLORS: Record<string, string> = {
-  usd: "#6fb0ff",
-  eur: "#46d8a0",
-  aud: "#f0bd8a",
-  inr: "#b79cff",
-};
+import { ccyFmt, ccySigned } from "@/lib/formatters";
 
 interface PortfolioContextValue {
   holdings: HoldingRow[];
@@ -29,19 +23,64 @@ interface PortfolioContextValue {
   waterfallData: WaterfallItem[];
   portfolioSeries: PortfolioSeriesPoint[];
   fxSeries: FxSeriesPoint[];
+  fxLabels: string[];
   fxColors: Record<string, string>;
+  baseFxRates: Record<string, number>;
+  // user settings — mutable
+  displayName: string;
+  baseCurrency: string;
+  setDisplayName: (v: string) => void;
+  setBaseCurrency: (v: string) => void;
+  // derived converters
+  toBase: (sgdVal: number) => number;
+  fmtVal: (sgdVal: number) => string;
+  fmtSigned: (sgdVal: number) => string;
+}
+
+interface ProviderProps {
+  value: Omit<PortfolioContextValue, "displayName" | "baseCurrency" | "setDisplayName" | "setBaseCurrency" | "toBase" | "fmtVal" | "fmtSigned"> & {
+    initialDisplayName: string;
+    initialBaseCurrency: string;
+  };
+  children: React.ReactNode;
 }
 
 const PortfolioContext = createContext<PortfolioContextValue | null>(null);
 
-export function PortfolioProvider({
-  value,
-  children,
-}: {
-  value: PortfolioContextValue;
-  children: React.ReactNode;
-}) {
-  return <PortfolioContext.Provider value={value}>{children}</PortfolioContext.Provider>;
+export function PortfolioProvider({ value, children }: ProviderProps) {
+  const [displayName, setDisplayName] = useState(value.initialDisplayName);
+  const [baseCurrency, setBaseCurrency] = useState(value.initialBaseCurrency);
+
+  const toBase = useCallback(
+    (sgdVal: number) => {
+      const rate = value.baseFxRates[baseCurrency] ?? 1;
+      return sgdVal / rate;
+    },
+    [baseCurrency, value.baseFxRates]
+  );
+
+  const fmtVal = useCallback(
+    (sgdVal: number) => ccyFmt(toBase(sgdVal), baseCurrency),
+    [toBase, baseCurrency]
+  );
+
+  const fmtSigned = useCallback(
+    (sgdVal: number) => ccySigned(toBase(sgdVal), baseCurrency),
+    [toBase, baseCurrency]
+  );
+
+  const ctx: PortfolioContextValue = {
+    ...value,
+    displayName,
+    baseCurrency,
+    setDisplayName,
+    setBaseCurrency,
+    toBase,
+    fmtVal,
+    fmtSigned,
+  };
+
+  return <PortfolioContext.Provider value={ctx}>{children}</PortfolioContext.Provider>;
 }
 
 export function usePortfolio(): PortfolioContextValue {

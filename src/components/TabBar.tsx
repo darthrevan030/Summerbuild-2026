@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Icon } from "@/components/Icon";
 
 const TABS = [
   { label: "Overview", href: "/overview" },
@@ -27,6 +28,14 @@ export function TabBar() {
         </Link>
       ))}
       <div className="tab-spacer" />
+      <Link
+        href="/settings"
+        className={"tab tab-settings" + (pathname === "/settings" ? " active" : "")}
+        title="Settings"
+      >
+        <Icon name="settings" size={14} style={{ marginRight: 5, verticalAlign: "middle" }} />
+        Settings
+      </Link>
     </nav>
   );
 }

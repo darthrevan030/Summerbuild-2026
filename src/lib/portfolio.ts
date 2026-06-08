@@ -17,6 +17,25 @@ import {
 
 const PAL = ["#b79cff", "#5fd0c6", "#6fb0ff", "#f4a6cf", "#8b8bff", "#f0bd8a"];
 
+const FX_COLOR_PALETTE = ["#6fb0ff", "#46d8a0", "#f0bd8a", "#b79cff", "#f4a6cf", "#8b8bff"];
+
+export function buildFxColors(cards: CurrencyCard[]): Record<string, string> {
+  const result: Record<string, string> = {};
+  cards.forEach((c, i) => {
+    result[c.code.toLowerCase()] = FX_COLOR_PALETTE[i % FX_COLOR_PALETTE.length];
+  });
+  return result;
+}
+
+/** Returns SGD-per-unit rates for every non-SGD currency in the portfolio, plus SGD=1 */
+export function buildBaseFxRates(cards: CurrencyCard[]): Record<string, number> {
+  const rates: Record<string, number> = { SGD: 1 };
+  for (const c of cards) {
+    if (c.cur > 0) rates[c.code] = c.cur;
+  }
+  return rates;
+}
+
 export function computeHeroStats(holdings: HoldingRow[]): HeroStats {
   const total = holdings.reduce((s, h) => s + h.valueSGD, 0);
   const cost = holdings.reduce((s, h) => s + h.costSGD, 0);
@@ -98,7 +117,7 @@ export function computeCurrencyCards(holdings: HoldingRow[]): CurrencyCard[] {
     (groups[h.currency] ??= []).push(h);
   }
   const flags: Record<string, string> = {
-    USD: "🇺🇸", EUR: "🇪🇺", GBP: "🇬🇧", AUD: "🇦🇺", INR: "🇮🇳", JPY: "🇯🇵",
+    USD: "🇺🇸", EUR: "🇪🇺", GBP: "🇬🇧", AUD: "🇦🇺", INR: "🇮🇳", JPY: "🇯🇵", HKD: "🇭🇰",
   };
   const grandTotal = holdings.reduce((s, h) => s + h.valueSGD, 0);
 
@@ -150,33 +169,40 @@ export function generatePortfolioSeries(total: number): PortfolioSeriesPoint[] {
   return series;
 }
 
-export function generateFxSeries(currencyCards: CurrencyCard[]): FxSeriesPoint[] {
-  const finals: Record<string, number> = { usd: 0, eur: 0, aud: 0, inr: 0 };
+/** Generates simulated FX impact series. Returns series data + YYYY-MM date strings. */
+export function generateFxSeries(currencyCards: CurrencyCard[]): {
+  series: FxSeriesPoint[];
+  fxLabels: string[];
+} {
+  const finals: Record<string, number> = {};
   for (const c of currencyCards) {
-    const key = c.code.toLowerCase();
-    if (key in finals) finals[key] = Math.round(c.impact);
+    finals[c.code.toLowerCase()] = Math.round(c.impact);
   }
+  const keys = Object.keys(finals);
 
   const series: FxSeriesPoint[] = [];
+  const fxLabels: string[] = [];
+  let yr = 2023, mo = 0;
+
   for (let i = 0; i < 42; i++) {
+    fxLabels.push(`${yr}-${String(mo + 1).padStart(2, "0")}`);
     const t = i / 41;
-    const ease = t * t * (3 - 2 * t); // smoothstep
+    const ease = t * t * (3 - 2 * t);
     const wobFor = (val: number, seed: number) =>
       Math.sin(i * 0.6 + seed) * (Math.abs(val) * 0.07);
-    series.push({
-      i,
-      usd: Math.round(finals.usd * ease + wobFor(finals.usd, 0)),
-      eur: Math.round(finals.eur * ease + wobFor(finals.eur, 1)),
-      aud: Math.round(finals.aud * ease + wobFor(finals.aud, 2)),
-      inr: Math.round(finals.inr * ease + wobFor(finals.inr, 3)),
+
+    const point: FxSeriesPoint = { i };
+    keys.forEach((k, idx) => {
+      point[k] = Math.round(finals[k] * ease + wobFor(finals[k], idx));
     });
+    series.push(point);
+    mo++;
+    if (mo > 11) { mo = 0; yr++; }
   }
+
   // pin last point to exact finals
   const last = series[series.length - 1];
-  last.usd = finals.usd;
-  last.eur = finals.eur;
-  last.aud = finals.aud;
-  last.inr = finals.inr;
+  for (const k of keys) last[k] = finals[k];
 
-  return series;
+  return { series, fxLabels };
 }

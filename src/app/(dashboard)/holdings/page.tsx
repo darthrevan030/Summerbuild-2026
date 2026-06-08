@@ -5,7 +5,7 @@ import { usePortfolio } from "@/context/portfolio";
 import { Icon } from "@/components/Icon";
 import { Spark } from "@/components/charts/Spark";
 import { Dumbbell } from "@/components/charts/Dumbbell";
-import { sgd, sgdSigned, pct, rate, NF } from "@/lib/formatters";
+import { pct, rate, NF } from "@/lib/formatters";
 import type { HoldingRow } from "@/types/holding";
 
 const STRAT: Record<string, { label: string; cls: string }> = {
@@ -21,6 +21,7 @@ const SORT_KEYS = ["name", "valueSGD", "assetGain", "fxGain", "totalPct"] as con
 type SortKey = typeof SORT_KEYS[number];
 
 function DetailCard({ h, onClose }: { h: HoldingRow; onClose: () => void }) {
+  const { fmtVal, fmtSigned } = usePortfolio();
   const d = h.detail;
   const total = h.assetGain + h.fxGain;
   const assetGainNative = (d.curPx - d.buyPx) * d.buyUnits;
@@ -40,7 +41,7 @@ function DetailCard({ h, onClose }: { h: HoldingRow; onClose: () => void }) {
 
       <div className="dc-hero">
         <div className="mono dc-total" style={{ color: total >= 0 ? "var(--gain)" : "var(--loss)" }}>
-          {sgdSigned(total)}
+          {fmtSigned(total)}
         </div>
         <div className="mono dc-pct" style={{ color: total >= 0 ? "var(--gain)" : "var(--loss)" }}>
           {pct(h.totalPct)}
@@ -59,7 +60,7 @@ function DetailCard({ h, onClose }: { h: HoldingRow; onClose: () => void }) {
         <div className="math-row">
           <span className="ui">Purchase</span>
           <span className="mono">
-            {d.buyUnits.toLocaleString()} @ {d.ccy === "SGD" ? sgd(d.buyPx, d.buyPx < 100 ? 2 : 0) : "$" + NF(d.buyPx, 2)}
+            {d.buyUnits.toLocaleString()} @ {d.ccy === "SGD" ? fmtVal(d.buyPx) : NF(d.buyPx, 2) + " " + d.ccy}
           </span>
         </div>
         <div className="math-row sub">
@@ -71,7 +72,7 @@ function DetailCard({ h, onClose }: { h: HoldingRow; onClose: () => void }) {
         <div className="math-row">
           <span className="ui">Current</span>
           <span className="mono">
-            {d.buyUnits.toLocaleString()} @ {d.ccy === "SGD" ? sgd(d.curPx, d.curPx < 100 ? 2 : 0) : "$" + NF(d.curPx, 2)}
+            {d.buyUnits.toLocaleString()} @ {d.ccy === "SGD" ? fmtVal(d.curPx) : NF(d.curPx, 2) + " " + d.ccy}
           </span>
         </div>
         {d.ccy !== "SGD" && (
@@ -86,8 +87,8 @@ function DetailCard({ h, onClose }: { h: HoldingRow; onClose: () => void }) {
         <div className="math-row">
           <span className="ui" style={{ color: "var(--gain)" }}>Asset gain</span>
           <span className="mono" style={{ color: "var(--gain)" }}>
-            {d.ccy !== "SGD" ? `+$${NF(assetGainNative)} × ${rate(d.curFx)} = ` : ""}
-            {sgdSigned(h.assetGain)}
+            {d.ccy !== "SGD" ? `+${NF(assetGainNative, 0)} ${d.ccy} = ` : ""}
+            {fmtSigned(h.assetGain)}
           </span>
         </div>
         <div className="math-row">
@@ -95,13 +96,13 @@ function DetailCard({ h, onClose }: { h: HoldingRow; onClose: () => void }) {
             FX {h.fxGain >= 0 ? "gain" : "drag"}
           </span>
           <span className="mono" style={{ color: h.fxGain >= 0 ? "var(--fx-positive)" : "var(--fx-negative)" }}>
-            {h.fxGain === 0 ? "—" : sgdSigned(h.fxGain)}
+            {h.fxGain === 0 ? "—" : fmtSigned(h.fxGain)}
           </span>
         </div>
         <div className="math-row total">
           <span className="ui">Total gain</span>
           <span className="mono">
-            {sgdSigned(total)}{" "}
+            {fmtSigned(total)}{" "}
             <span style={{ color: total >= 0 ? "var(--gain)" : "var(--loss)" }}>({pct(h.totalPct)})</span>
           </span>
         </div>
@@ -120,7 +121,7 @@ function DetailCard({ h, onClose }: { h: HoldingRow; onClose: () => void }) {
 }
 
 export default function HoldingsPage() {
-  const { holdings } = usePortfolio();
+  const { holdings, fmtVal, fmtSigned } = usePortfolio();
 
   const [q, setQ] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
@@ -257,13 +258,13 @@ export default function HoldingsPage() {
                   <td><span className="ui dim">{h.assetType}</span></td>
                   <td><span className="ui dim">{h.broker}</span></td>
                   <td><span className={"strat " + strat.cls}>{strat.label}</span></td>
-                  <td className="r mono">{sgd(h.valueSGD)}</td>
-                  <td className="r mono" style={{ color: "var(--gain)" }}>{sgdSigned(h.assetGain)}</td>
+                  <td className="r mono">{fmtVal(h.valueSGD)}</td>
+                  <td className="r mono" style={{ color: "var(--gain)" }}>{fmtSigned(h.assetGain)}</td>
                   <td
                     className="r mono"
                     style={{ color: h.fxGain > 0 ? "var(--fx-positive)" : h.fxGain < 0 ? "var(--fx-negative)" : "var(--text-muted)" }}
                   >
-                    {h.fxGain === 0 ? "—" : sgdSigned(h.fxGain)}
+                    {h.fxGain === 0 ? "—" : fmtSigned(h.fxGain)}
                   </td>
                   <td className="r mono bold" style={{ color: total >= 0 ? "var(--gain)" : "var(--loss)" }}>
                     {pct(h.totalPct)}

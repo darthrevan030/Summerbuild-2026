@@ -15,4 +15,19 @@ const pct = (n: number, d = 2): string =>
 
 const rate = (n: number): string => NF(n, 4);
 
-export { NF, sgd, sgdSigned, pct, rate };
+const CCY_SYMBOL: Record<string, string> = {
+  SGD: "S$", USD: "US$", EUR: "€", GBP: "£",
+  AUD: "A$", JPY: "¥", INR: "₹", HKD: "HK$",
+};
+
+function ccyFmt(n: number, ccy: string, d = 0): string {
+  const sym = CCY_SYMBOL[ccy] ?? ccy + " ";
+  return sym + NF(n, d);
+}
+
+function ccySigned(n: number, ccy: string, d = 0): string {
+  const sym = CCY_SYMBOL[ccy] ?? ccy + " ";
+  return (n < 0 ? "−" : "+") + sym + NF(n, d);
+}
+
+export { NF, sgd, sgdSigned, pct, rate, ccyFmt, ccySigned, CCY_SYMBOL };

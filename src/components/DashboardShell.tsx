@@ -28,14 +28,19 @@ interface DashboardShellProps {
   waterfallData: WaterfallItem[];
   portfolioSeries: PortfolioSeriesPoint[];
   fxSeries: FxSeriesPoint[];
+  fxLabels: string[];
   fxColors: Record<string, string>;
+  baseFxRates: Record<string, number>;
+  initialDisplayName: string;
+  initialBaseCurrency: string;
   children: React.ReactNode;
 }
 
 export function DashboardShell({
   holdings, hero, assetAllocation, geoAllocation,
   movers, currencyCards, waterfallData,
-  portfolioSeries, fxSeries, fxColors,
+  portfolioSeries, fxSeries, fxLabels, fxColors, baseFxRates,
+  initialDisplayName, initialBaseCurrency,
   children,
 }: DashboardShellProps) {
   const [tweaksOpen, setTweaksOpen] = useState(false);
@@ -46,7 +51,8 @@ export function DashboardShell({
     <PortfolioProvider value={{
       holdings, hero, assetAllocation, geoAllocation,
       movers, currencyCards, waterfallData,
-      portfolioSeries, fxSeries, fxColors,
+      portfolioSeries, fxSeries, fxLabels, fxColors, baseFxRates,
+      initialDisplayName, initialBaseCurrency,
     }}>
       <div className="app">
         <NerveBar hero={hero} animate onTweaksToggle={() => setTweaksOpen((o) => !o)} />

@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { HoldingRow } from "@/types/holding";
+import type { UserSettings } from "@/types/settings";
 import {
   computeCurrentValueSGD,
   computeCostBasisSGD,
@@ -145,4 +146,33 @@ export async function deleteHolding(id: string, userId = DEMO_USER): Promise<voi
   const supabase = await makeServerClient();
   // Scope by both id AND user_id — prevents IDOR when multiple users share the table
   await supabase.from("holdings").delete().eq("id", id).eq("user_id", userId);
+}
+
+export async function fetchUserSettings(userId: string): Promise<UserSettings> {
+  const supabase = await makeServerClient();
+  const { data } = await supabase
+    .from("user_settings")
+    .select("display_name, base_currency")
+    .eq("user_id", userId)
+    .single();
+  return {
+    displayName: data?.display_name ?? "",
+    baseCurrency: data?.base_currency ?? "SGD",
+  };
+}
+
+export async function upsertUserSettings(
+  userId: string,
+  settings: Partial<UserSettings>
+): Promise<void> {
+  const supabase = await makeServerClient();
+  await supabase.from("user_settings").upsert(
+    {
+      user_id: userId,
+      ...(settings.displayName !== undefined && { display_name: settings.displayName }),
+      ...(settings.baseCurrency !== undefined && { base_currency: settings.baseCurrency }),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" }
+  );
 }

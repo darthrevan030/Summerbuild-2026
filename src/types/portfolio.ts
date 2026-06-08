@@ -50,8 +50,4 @@ export interface PortfolioSeriesPoint {
 export interface FxSeriesPoint {
   [key: string]: number;
   i: number;
-  usd: number;
-  eur: number;
-  aud: number;
-  inr: number;
 }

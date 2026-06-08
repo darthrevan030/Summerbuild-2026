@@ -1,4 +1,4 @@
-import { fetchHoldings } from "@/lib/supabase/data";
+import { fetchHoldings, fetchUserSettings } from "@/lib/supabase/data";
 import {
   computeHeroStats,
   computeAllocationByAsset,
@@ -8,16 +8,20 @@ import {
   computeWaterfall,
   generatePortfolioSeries,
   generateFxSeries,
+  buildFxColors,
+  buildBaseFxRates,
 } from "@/lib/portfolio";
 import { DashboardShell } from "@/components/DashboardShell";
-import { FX_COLORS } from "@/context/portfolio";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const holdings = await fetchHoldings(user?.id);
+  const [holdings, userSettings] = await Promise.all([
+    fetchHoldings(user?.id),
+    user ? fetchUserSettings(user.id) : Promise.resolve({ displayName: "", baseCurrency: "SGD" }),
+  ]);
 
   const hero = computeHeroStats(holdings);
   const assetAllocation = computeAllocationByAsset(holdings);
@@ -26,7 +30,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const currencyCards = computeCurrencyCards(holdings);
   const waterfallData = computeWaterfall(currencyCards);
   const portfolioSeries = generatePortfolioSeries(hero.total);
-  const fxSeries = generateFxSeries(currencyCards);
+  const { series: fxSeries, fxLabels } = generateFxSeries(currencyCards);
+  const fxColors = buildFxColors(currencyCards);
+  const baseFxRates = buildBaseFxRates(currencyCards);
 
   return (
     <DashboardShell
@@ -39,7 +45,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
       waterfallData={waterfallData}
       portfolioSeries={portfolioSeries}
       fxSeries={fxSeries}
-      fxColors={FX_COLORS}
+      fxLabels={fxLabels}
+      fxColors={fxColors}
+      baseFxRates={baseFxRates}
+      initialDisplayName={userSettings.displayName}
+      initialBaseCurrency={userSettings.baseCurrency}
     >
       {children}
     </DashboardShell>

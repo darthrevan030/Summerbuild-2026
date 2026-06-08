@@ -4,10 +4,11 @@ import { usePortfolio } from "@/context/portfolio";
 import { Icon } from "@/components/Icon";
 import { Spark } from "@/components/charts/Spark";
 import { useCountUp } from "@/lib/useCountUp";
-import { sgd, sgdSigned, pct, rate } from "@/lib/formatters";
+import { pct, rate } from "@/lib/formatters";
 import type { CurrencyCard, WaterfallItem } from "@/types/portfolio";
 
 function CcyCard({ c, delay }: { c: CurrencyCard; delay: string }) {
+  const { fmtVal, fmtSigned } = usePortfolio();
   const pos = c.impact >= 0;
   const col = pos ? "var(--fx-positive)" : "var(--fx-negative)";
   return (
@@ -24,7 +25,7 @@ function CcyCard({ c, delay }: { c: CurrencyCard; delay: string }) {
       <div className="cc-grid">
         <div>
           <div className="ui muted xs">Exposure</div>
-          <div className="mono cc-v">{sgd(c.exposure)}</div>
+          <div className="mono cc-v">{fmtVal(c.exposure)}</div>
           <div className="ui muted xs">{c.exposurePct.toFixed(1)}% of book</div>
         </div>
         <div>
@@ -36,7 +37,7 @@ function CcyCard({ c, delay }: { c: CurrencyCard; delay: string }) {
       <div className="cc-foot">
         <div>
           <div className="ui muted xs">FX Impact</div>
-          <div className="mono cc-impact" style={{ color: col }}>{sgdSigned(c.impact)}</div>
+          <div className="mono cc-impact" style={{ color: col }}>{fmtSigned(c.impact)}</div>
         </div>
         <div className="cc-spark">
           {c.spark.length > 0 && <Spark pts={c.spark} color={col} w={132} h={40} />}
@@ -47,12 +48,13 @@ function CcyCard({ c, delay }: { c: CurrencyCard; delay: string }) {
 }
 
 function Waterfall({ items, netImpact, netPct }: { items: WaterfallItem[]; netImpact: number; netPct: number }) {
+  const { fmtSigned, baseCurrency } = usePortfolio();
   const max = Math.max(...items.map((i) => Math.abs(i.value)), 1);
   return (
     <div className="card reveal" style={{ animationDelay: ".28s" }}>
       <div className="card-head">
         <span className="card-title">Currency Contribution to Portfolio</span>
-        <span className="ui muted">SGD</span>
+        <span className="ui muted">{baseCurrency}</span>
       </div>
       <div className="waterfall">
         {items.map((it) => {
@@ -76,7 +78,7 @@ function Waterfall({ items, netImpact, netPct }: { items: WaterfallItem[]; netIm
                 className="mono wf-val"
                 style={{ color: pos ? "var(--fx-positive)" : "var(--fx-negative)" }}
               >
-                {sgdSigned(it.value)}
+                {fmtSigned(it.value)}
               </span>
             </div>
           );
@@ -84,7 +86,7 @@ function Waterfall({ items, netImpact, netPct }: { items: WaterfallItem[]; netIm
         <div className="wf-net">
           <span className="ui muted">Net FX effect</span>
           <span className="mono" style={{ color: netImpact >= 0 ? "var(--fx-positive)" : "var(--fx-negative)" }}>
-            {sgdSigned(netImpact)}{" "}
+            {fmtSigned(netImpact)}{" "}
             <span className="muted">({pct(netPct)})</span>
           </span>
         </div>
@@ -94,7 +96,7 @@ function Waterfall({ items, netImpact, netPct }: { items: WaterfallItem[]; netIm
 }
 
 export default function FXLabPage() {
-  const { hero, currencyCards, waterfallData } = usePortfolio();
+  const { hero, currencyCards, waterfallData, fmtVal } = usePortfolio();
   const actual  = useCountUp(hero.total,   1100);
   const neutral = useCountUp(hero.neutral, 1100);
 
@@ -122,14 +124,14 @@ export default function FXLabPage() {
       <div className="versus reveal">
         <div className="vs-side">
           <div className="ui muted label">Actual Portfolio</div>
-          <div className="serif vs-num">{sgd(actual)}</div>
+          <div className="serif vs-num">{fmtVal(actual)}</div>
         </div>
         <div className="vs-mid">
           <div className="vs-vs ui">vs</div>
         </div>
         <div className="vs-side right">
           <div className="ui muted label">FX-Neutral Portfolio</div>
-          <div className="serif vs-num dim">{sgd(neutral)}</div>
+          <div className="serif vs-num dim">{fmtVal(neutral)}</div>
         </div>
         <div className="vs-verdict">
           <Icon name={verdictPositive ? "up" : "down"} size={16} style={{ color: verdictPositive ? "var(--fx-positive)" : "var(--fx-negative)" }} />
@@ -137,7 +139,7 @@ export default function FXLabPage() {
             Currency has{" "}
             {verdictPositive ? "added" : "cost"}{" "}
             <b className="mono" style={{ color: verdictPositive ? "var(--fx-positive)" : "var(--fx-negative)" }}>
-              {sgdSigned(hero.fxImpact)}
+              {fmtVal(Math.abs(hero.fxImpact))}
             </b>{" "}
             <span className="mono" style={{ color: verdictPositive ? "var(--fx-positive)" : "var(--fx-negative)" }}>
               ({pct(hero.fxPct)})

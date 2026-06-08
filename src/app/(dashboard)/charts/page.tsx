@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { usePortfolio } from "@/context/portfolio";
 import { Donut } from "@/components/charts/Donut";
 import { Legend } from "@/components/charts/Legend";
 import { AreaTrend } from "@/components/charts/AreaTrend";
 import { FXArea } from "@/components/charts/FXArea";
-import { sgd, sgdSigned, pct } from "@/lib/formatters";
+import { pct } from "@/lib/formatters";
 
 const RANGES: [string, number][] = [["6M", 6], ["1Y", 12], ["3Y", 36], ["All", 999]];
 
 function PortfolioTrend() {
-  const { portfolioSeries } = usePortfolio();
+  const { portfolioSeries, fmtVal, fmtSigned } = usePortfolio();
   const [ri, setRi] = useState(1);
   const n = Math.min(RANGES[ri][1], portfolioSeries.length);
   const data = portfolioSeries.slice(portfolioSeries.length - n);
@@ -41,10 +41,10 @@ function PortfolioTrend() {
       <div className="trend-meta">
         <span className="ui muted xs">{first.label} – {last.label}</span>
         <span className="mono xs" style={{ color: pos ? "var(--gain)" : "var(--loss)" }}>
-          {sgdSigned(chg)} ({pct(chgPct)})
+          {fmtSigned(chg)} ({pct(chgPct)})
         </span>
       </div>
-      <AreaTrend key={ri} data={data} color="var(--gold)" height={232} valFmt={(v) => sgd(v)} />
+      <AreaTrend key={ri} data={data} color="var(--gold)" height={232} valFmt={(v) => fmtVal(v)} />
     </div>
   );
 }
@@ -83,19 +83,103 @@ function PerfBars() {
   );
 }
 
-export default function ChartsPage() {
-  const { hero, assetAllocation, fxSeries, fxColors } = usePortfolio();
-  const [hl, setHl] = useState(-1);
+function FXImpactCard() {
+  const { fxSeries, fxColors, fxLabels } = usePortfolio();
+
+  // fxLabels is array of "YYYY-MM" strings matching fxSeries indices
+  const minDate = fxLabels[0] ?? "2023-01";
+  const maxDate = fxLabels[fxLabels.length - 1] ?? "2026-06";
+
+  const [startDate, setStartDate] = useState(minDate);
+  const [endDate, setEndDate] = useState(maxDate);
 
   const fxKeys = Object.keys(fxColors);
+
+  const filteredSeries = useMemo(() => {
+    const si = fxLabels.indexOf(startDate);
+    const ei = fxLabels.indexOf(endDate);
+    if (si === -1 || ei === -1 || si > ei) return fxSeries;
+    return fxSeries.slice(si, ei + 1);
+  }, [fxSeries, fxLabels, startDate, endDate]);
+
+  function handleStartChange(v: string) {
+    setStartDate(v);
+    if (v > endDate) setEndDate(v);
+  }
+  function handleEndChange(v: string) {
+    setEndDate(v);
+    if (v < startDate) setStartDate(v);
+  }
+
+  return (
+    <div className="card chart-card reveal" style={{ animationDelay: ".19s" }}>
+      <div className="card-head">
+        <span className="card-title">FX Impact Over Time</span>
+        <span className="ui muted">cumulative, SGD</span>
+      </div>
+
+      {fxSeries.length > 0 ? (
+        <>
+          <div className="date-range-row">
+            <div className="date-field">
+              <label className="date-label ui muted xs">From</label>
+              <input
+                type="month"
+                className="date-inp mono"
+                value={startDate}
+                min={minDate}
+                max={maxDate}
+                onChange={(e) => handleStartChange(e.target.value)}
+              />
+            </div>
+            <span className="date-sep ui muted">—</span>
+            <div className="date-field">
+              <label className="date-label ui muted xs">To</label>
+              <input
+                type="month"
+                className="date-inp mono"
+                value={endDate}
+                min={minDate}
+                max={maxDate}
+                onChange={(e) => handleEndChange(e.target.value)}
+              />
+            </div>
+            <button
+              className="date-reset ui muted"
+              onClick={() => { setStartDate(minDate); setEndDate(maxDate); }}
+              title="Reset to full range"
+            >
+              Reset
+            </button>
+          </div>
+          <FXArea data={filteredSeries} colors={fxColors} keys={fxKeys} height={210} />
+          <div className="fx-legend">
+            {fxKeys.map((k) => (
+              <span key={k}>
+                <i style={{ background: fxColors[k] }} />
+                <span className="ui">{k.toUpperCase()}</span>
+              </span>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="ui muted" style={{ padding: "32px 0", textAlign: "center" }}>
+          Add foreign-currency holdings to see FX impact over time.
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ChartsPage() {
+  const { hero, assetAllocation, fmtVal } = usePortfolio();
+  const [hl, setHl] = useState(-1);
 
   return (
     <div className="tab-body">
       <div className="charts-grid">
-        {/* portfolio value over time */}
         <PortfolioTrend />
 
-        {/* asset allocation donut */}
         <div className="card chart-card reveal" style={{ animationDelay: ".09s" }}>
           <div className="card-head">
             <span className="card-title">Asset Allocation</span>
@@ -112,7 +196,7 @@ export default function ChartsPage() {
               <div>
                 <div className="ui muted xs">{hl >= 0 ? assetAllocation[hl]?.label : "Total"}</div>
                 <div className="mono donut-pct">
-                  {hl >= 0 ? assetAllocation[hl]?.value + "%" : sgd(hero.total / 1000) + "k"}
+                  {hl >= 0 ? assetAllocation[hl]?.value + "%" : fmtVal(hero.total)}
                 </div>
               </div>
             </Donut>
@@ -124,7 +208,6 @@ export default function ChartsPage() {
           </div>
         </div>
 
-        {/* per-asset performance */}
         <div className="card chart-card reveal" style={{ animationDelay: ".14s" }}>
           <div className="card-head">
             <span className="card-title">Per-Asset Performance</span>
@@ -133,30 +216,7 @@ export default function ChartsPage() {
           <PerfBars />
         </div>
 
-        {/* fx impact over time */}
-        <div className="card chart-card reveal" style={{ animationDelay: ".19s" }}>
-          <div className="card-head">
-            <span className="card-title">FX Impact Over Time</span>
-            <span className="ui muted">cumulative, SGD</span>
-          </div>
-          {fxSeries.length > 0 ? (
-            <>
-              <FXArea data={fxSeries} colors={fxColors} keys={fxKeys} height={210} />
-              <div className="fx-legend">
-                {fxKeys.map((k) => (
-                  <span key={k}>
-                    <i style={{ background: fxColors[k] }} />
-                    <span className="ui">{k.toUpperCase()}</span>
-                  </span>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="ui muted" style={{ padding: "32px 0", textAlign: "center" }}>
-              Add foreign-currency holdings to see FX impact over time.
-            </div>
-          )}
-        </div>
+        <FXImpactCard />
       </div>
     </div>
   );
