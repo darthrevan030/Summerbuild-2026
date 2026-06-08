@@ -56,6 +56,28 @@ function sentPath(id: string, score: number) {
   return pts;
 }
 
+// ---- spark → sentiment path utilities ----
+function sampleTo(arr: number[], n: number): number[] {
+  if (!arr.length) return [];
+  if (arr.length <= n) return arr;
+  return Array.from({ length: n }, (_, i) =>
+    arr[Math.round((i / (n - 1)) * (arr.length - 1))]
+  );
+}
+
+function sparkToSentPath(spark: number[]): number[] {
+  if (spark.length < 2) return [];
+  const pts = sampleTo(spark, 12);
+  const min = Math.min(...pts), max = Math.max(...pts), rng = max - min || 1;
+  return pts.map(v => Math.round(((v - min) / rng) * 200 - 100));
+}
+
+function priceDelta(spark: number[]): number | null {
+  if (spark.length < 2) return null;
+  const first = spark[0];
+  return first === 0 ? null : ((spark[spark.length - 1] - first) / first) * 100;
+}
+
 // ---- MiniSpark (inline sentiment trend) ----
 function MiniSpark({ pts, color, height = 44 }: { pts: number[]; color: string; height?: number }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -107,11 +129,12 @@ function ScoreRail({ score }: { score: number }) {
 // ---- SentDrawer (headlines + 30-day trend) ----
 const HL_CACHE: Record<string, { t: string; src: string; sent: string; ago: string }[]> = {};
 
-function SentDrawer({ id, name, assetType, score }: { id: string; name: string; assetType: string; score: number }) {
+function SentDrawer({ id, name, assetType, score, sparkData }: { id: string; name: string; assetType: string; score: number; sparkData: number[] }) {
   const [hl, setHl]       = useState<typeof HL_CACHE[string] | null>(HL_CACHE[id] ?? null);
   const [loading, setLoading] = useState(!HL_CACHE[id]);
-  const pts   = sentPath(id, score);
-  const delta = pts[pts.length - 1] - pts[0];
+  const useRealPrices = sparkData.length >= 2;
+  const pts   = useRealPrices ? sparkToSentPath(sparkData) : sentPath(id, score);
+  const delta = useRealPrices ? (priceDelta(sparkData) ?? 0) : pts[pts.length - 1] - pts[0];
 
   useEffect(() => {
     if (HL_CACHE[id]) return;
@@ -138,9 +161,9 @@ function SentDrawer({ id, name, assetType, score }: { id: string; name: string; 
     <div className="sent-drawer">
       <div className="sd-trend">
         <div className="sd-trend-head">
-          <span className="ui muted xs">30-day sentiment</span>
+          <span className="ui muted xs">{useRealPrices ? "30-day price" : "30-day sentiment"}</span>
           <span className="mono xs" style={{ color: delta >= 0 ? "var(--gain)" : "var(--loss)" }}>
-            {delta >= 0 ? "▲" : "▼"} {Math.abs(delta)} pts
+            {delta >= 0 ? "▲" : "▼"} {Math.abs(Math.round(delta))}{useRealPrices ? "%" : " pts"}
           </span>
         </div>
         <MiniSpark pts={pts} color={toneFor(score)} />
@@ -172,7 +195,7 @@ function SentDrawer({ id, name, assetType, score }: { id: string; name: string; 
 }
 
 // ---- SentCard ----
-interface SentItem { id: string; name: string; icon: string; assetType: string; ticker: string; score: number; summary: string; drivers: string[] }
+interface SentItem { id: string; name: string; icon: string; assetType: string; ticker: string; score: number; summary: string; drivers: string[]; sparkData: number[] }
 
 function SentCard({ it, delay }: { it: SentItem; delay: number }) {
   const [open, setOpen] = useState(false);
@@ -197,7 +220,7 @@ function SentCard({ it, delay }: { it: SentItem; delay: number }) {
         {open ? "Hide detail" : "Headlines & 30-day trend"}
         <Icon name="chevron" size={14} />
       </button>
-      {open && <SentDrawer id={it.id} name={it.name} assetType={it.assetType} score={it.score} />}
+      {open && <SentDrawer id={it.id} name={it.name} assetType={it.assetType} score={it.score} sparkData={it.sparkData} />}
     </div>
   );
 }
@@ -346,17 +369,19 @@ function buildFallback(holdings: HoldingRow[]): AnalysisData {
   const items = holdings.map((h, i) => {
     const id  = h.ticker !== "—" ? h.ticker : (h.assetType + "_" + i);
     const fb  = FALLBACK_ITEMS[id] ?? { score: 0, summary: `${h.name} — no analysis available.`, drivers: [] };
-    return { id, name: h.name, icon: h.icon, assetType: h.assetType, ticker: id, ...fb };
+    return { id, name: h.name, icon: h.icon, assetType: h.assetType, ticker: id, sparkData: h.sparkData, ...fb };
   });
   return { items, overall: FALLBACK_OVERALL, source: "sample" };
 }
 
 async function runSentimentAI(holdings: HoldingRow[]): Promise<AnalysisData> {
   const assets = holdings.map((h, i) => ({
-    id:   h.ticker !== "—" ? h.ticker : (h.assetType + "_" + i),
-    name: h.name,
-    type: h.assetType,
-    icon: h.icon,
+    id:        h.ticker !== "—" ? h.ticker : (h.assetType + "_" + i),
+    name:      h.name,
+    type:      h.assetType,
+    icon:      h.icon,
+    sparkData: h.sparkData,
+    delta:     priceDelta(h.sparkData),
   }));
 
   const prompt =
@@ -364,7 +389,10 @@ async function runSentimentAI(holdings: HoldingRow[]): Promise<AnalysisData> {
     'Respond with ONLY minified JSON (no markdown, no commentary) in exactly this shape:\n' +
     '{"overall":{"score":INT,"note":"<=13 words"},"items":[{"id":"ID","score":INT,"summary":"<=24 words","drivers":["<=3 words","<=3 words","<=3 words"]}]}\n' +
     "score is an integer from -100 (very bearish) to 100 (very bullish). Echo back each id exactly.\n\nHoldings:\n" +
-    assets.map((a) => `- id=${a.id} | ${a.name} | ${a.type}`).join("\n");
+    assets.map((a) => {
+      const deltaStr = a.delta != null ? ` | 30d price: ${a.delta >= 0 ? "+" : ""}${a.delta.toFixed(1)}%` : "";
+      return `- id=${a.id} | ${a.name} | ${a.type}${deltaStr}`;
+    }).join("\n");
 
   let text = "";
   await streamAnalysis(prompt, (chunk) => { text += chunk; });
@@ -375,7 +403,7 @@ async function runSentimentAI(holdings: HoldingRow[]): Promise<AnalysisData> {
 
   const items = assets.map((as) => {
     const f = byId[as.id] ?? FALLBACK_ITEMS[as.id] ?? {};
-    return { ...as, assetType: as.type, ticker: as.id, score: clamp((f as { score?: number }).score ?? 0), summary: (f as { summary?: string }).summary ?? "", drivers: ((f as { drivers?: string[] }).drivers ?? []).slice(0, 3) };
+    return { ...as, assetType: as.type, ticker: as.id, sparkData: as.sparkData, score: clamp((f as { score?: number }).score ?? 0), summary: (f as { summary?: string }).summary ?? "", drivers: ((f as { drivers?: string[] }).drivers ?? []).slice(0, 3) };
   });
 
   const ovScore = json.overall?.score != null ? clamp(json.overall.score) : mean(items.map((i) => i.score));
