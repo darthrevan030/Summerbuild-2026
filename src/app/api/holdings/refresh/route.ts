@@ -28,14 +28,17 @@ export async function POST() {
     return Response.json({ refreshed: 0, skipped: holdings.length });
   }
 
-  // Unique non-placeholder tickers across all stale holdings
+  // Unique non-placeholder tickers + their currencies for exchange resolution
   const tickers = [...new Set(stale.map((h) => h.ticker).filter((t) => t !== "—"))];
+  const tickerCurrency = Object.fromEntries(
+    stale.filter((h) => h.ticker !== "—").map((h) => [h.ticker, h.currency])
+  );
 
   const [livePrices, liveFxRates, cryptoSparks, equitySparks] = await Promise.all([
-    fetchLivePrices(tickers),
+    fetchLivePrices(tickers, tickerCurrency),
     fetchLiveFxRates(),
     fetchCryptoSparks(tickers),
-    fetchEquitySparks(tickers),
+    fetchEquitySparks(tickers, tickerCurrency),
   ]);
 
   await Promise.all(

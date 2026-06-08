@@ -8,7 +8,27 @@ import { fetchFx } from "@/lib/api-client";
 
 const ASSET_TYPES = ["Equity", "ETF", "REIT", "Gold", "RE"];
 const STRATEGIES  = ["long_term", "active", "speculative", "physical"];
-const CURRENCIES  = ["SGD", "USD", "EUR", "AUD", "GBP", "INR"];
+const CURRENCIES  = ["SGD", "USD", "EUR", "AUD", "GBP", "INR", "JPY", "HKD"];
+
+// EODHD exchange codes with human labels, grouped by region
+const EXCHANGES: { code: string; label: string }[] = [
+  { code: "",     label: "— No exchange (physical / unlisted)" },
+  { code: "US",   label: "US · NYSE / NASDAQ" },
+  { code: "LSE",  label: "LSE · London Stock Exchange" },
+  { code: "TSE",  label: "TSE · Tokyo Stock Exchange" },
+  { code: "HKEX", label: "HKEX · Hong Kong Exchange" },
+  { code: "NSE",  label: "NSE · National Stock Exchange India" },
+  { code: "BSE",  label: "BSE · Bombay Stock Exchange" },
+  { code: "SG",   label: "SGX · Singapore Exchange" },
+  { code: "ASX",  label: "ASX · Australian Securities Exchange" },
+  { code: "XETRA",label: "XETRA · Deutsche Börse (Germany)" },
+  { code: "PA",   label: "Euronext Paris" },
+  { code: "MI",   label: "Borsa Italiana (Milan)" },
+  { code: "SHG",  label: "SSE · Shanghai Stock Exchange" },
+  { code: "SHE",  label: "SZSE · Shenzhen Stock Exchange" },
+];
+
+const PHYSICAL_TYPES = new Set(["Gold", "RE"]);
 
 const STRAT_LABEL: Record<string, string> = {
   long_term: "Long Term", active: "Active", speculative: "Speculative", physical: "Physical",
@@ -62,7 +82,7 @@ function parseCsv(text: string): { headers: string[]; rows: CsvRow[] } {
 function ManualForm() {
   const router = useRouter();
   const [form, setForm] = useState({
-    name: "", ticker: "", asset_type: "Equity", strategy: "long_term",
+    name: "", ticker: "", exchange: "US", asset_type: "Equity", strategy: "long_term",
     broker: "", units: "", currency: "USD", buy_price: "",
     buy_date: new Date().toISOString().slice(0, 10),
     buy_fx_rate: "", notes: "",
@@ -115,8 +135,14 @@ function ManualForm() {
   const handleSubmit = async () => {
     setError(""); setSaving(true);
     try {
+      // Append exchange suffix so EODHD/Finnhub know which market to query
+      const baseTicker = form.ticker.toUpperCase() || "—";
+      const tickerWithExchange = baseTicker !== "—" && form.exchange
+        ? `${baseTicker}.${form.exchange}`
+        : baseTicker;
+
       const payload = {
-        ticker:          form.ticker || "—",
+        ticker:          tickerWithExchange,
         name:            form.name,
         asset_type:      form.asset_type,
         broker:          form.broker,
@@ -162,8 +188,30 @@ function ManualForm() {
         <Field label="Ticker">
           <input className="inp" placeholder="MSFT" value={form.ticker} onChange={(e) => set("ticker", e.target.value.toUpperCase())} />
         </Field>
+        {!PHYSICAL_TYPES.has(form.asset_type) && (
+          <Field label="Exchange">
+            <div className="select" style={{ position: "relative" }}>
+              <select
+                value={form.exchange}
+                onChange={(e) => set("exchange", e.target.value)}
+                style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }}
+              >
+                {EXCHANGES.map((ex) => (
+                  <option key={ex.code} value={ex.code}>{ex.label}</option>
+                ))}
+              </select>
+              <span className="ui">
+                {EXCHANGES.find((ex) => ex.code === form.exchange)?.label ?? "— No exchange"}
+              </span>
+              <Icon name="chevron" size={14} />
+            </div>
+          </Field>
+        )}
         <Field label="Asset Type">
-          <Select value={form.asset_type} options={ASSET_TYPES} onChange={(v) => set("asset_type", v)} />
+          <Select value={form.asset_type} options={ASSET_TYPES} onChange={(v) => {
+            set("asset_type", v);
+            if (PHYSICAL_TYPES.has(v)) set("exchange", "");
+          }} />
         </Field>
         <Field label="Strategy">
           <Select value={STRAT_LABEL[form.strategy]} options={Object.values(STRAT_LABEL)} onChange={(v) => {
