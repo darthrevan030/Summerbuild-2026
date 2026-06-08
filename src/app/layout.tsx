@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { DM_Serif_Display, JetBrains_Mono, Sora } from "next/font/google";
 import "./globals.css";
 
+import { Analytics } from "@vercel/analytics/next";
+
 const dmSerif = DM_Serif_Display({
   variable: "--font-serif",
   subsets: ["latin"],
@@ -37,6 +39,7 @@ export default function RootLayout({
       className={`${dmSerif.variable} ${jetbrainsMono.variable} ${sora.variable}`}
     >
       <body>{children}</body>
+      <Analytics />
     </html>
   );
 }
