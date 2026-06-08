@@ -3,22 +3,18 @@
 import { useState } from "react";
 import { usePortfolio } from "@/context/portfolio";
 import { Icon } from "@/components/Icon";
-import { CCY_SYMBOL } from "@/lib/formatters";
-
-const SUPPORTED_CURRENCIES = ["SGD", "USD", "EUR", "GBP", "AUD", "JPY", "INR", "HKD"];
+import { CCY_SYMBOL, SUPPORTED_CURRENCIES } from "@/lib/formatters";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 export default function SettingsPage() {
-  const { displayName, baseCurrency, baseFxRates, setDisplayName, setBaseCurrency } = usePortfolio();
+  const { displayName, baseCurrency, baseFxRates, fxColors, setDisplayName, setBaseCurrency } = usePortfolio();
 
   const [nameInput, setNameInput] = useState(displayName);
   const [ccyInput, setCcyInput] = useState(baseCurrency);
   const [saveState, setSaveState] = useState<SaveState>("idle");
 
-  const availableCurrencies = SUPPORTED_CURRENCIES.filter(
-    (c) => c === "SGD" || c in baseFxRates
-  );
+  const isLiveRate = (c: string) => c === "SGD" || c.toLowerCase() in fxColors;
 
   const isDirty = nameInput !== displayName || ccyInput !== baseCurrency;
 
@@ -89,7 +85,7 @@ export default function SettingsPage() {
             <span className="ui muted">all portfolio totals convert to this currency</span>
           </div>
           <div className="ccy-picker">
-            {availableCurrencies.map((c) => (
+            {SUPPORTED_CURRENCIES.map((c) => (
               <button
                 key={c}
                 type="button"
@@ -100,7 +96,7 @@ export default function SettingsPage() {
                 <span className="ui ccy-code">{c}</span>
                 {c !== "SGD" && baseFxRates[c] && (
                   <span className="mono ccy-rate muted">
-                    1 {c} = {baseFxRates[c].toFixed(4)} SGD
+                    {isLiveRate(c) ? "" : "~"}{baseFxRates[c].toFixed(4)} SGD
                   </span>
                 )}
               </button>
@@ -108,7 +104,9 @@ export default function SettingsPage() {
           </div>
           {ccyInput !== "SGD" && (
             <p className="ui muted" style={{ fontSize: 12, marginTop: 12 }}>
-              Values are converted from SGD using the rates from your current holdings. Rates refresh when you reload the dashboard.
+              {isLiveRate(ccyInput)
+                ? "Rate from your current holdings. Refreshes on page reload."
+                : "Approximate static rate — add a holding in this currency for a live rate."}
             </p>
           )}
         </div>

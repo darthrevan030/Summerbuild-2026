@@ -477,8 +477,16 @@ body.no-grain::before{display:none;}
 .content{min-width:0;}
 .tab-body{min-width:0;width:100%;}
 
-/* ---------- nerve bar: base currency badge ---------- */
-.nr-ccy{font-size:11px;font-weight:600;color:var(--gold);background:var(--accent-wash);border:1px solid var(--border-gold);border-radius:7px;padding:4px 9px;letter-spacing:.06em;}
+/* ---------- nerve bar: currency switcher ---------- */
+.nr-ccy{font-size:11px;font-weight:600;color:var(--gold);background:var(--accent-wash);border:1px solid var(--border-gold);border-radius:7px;padding:4px 9px;letter-spacing:.06em;transition:filter .15s;}
+.nr-ccy:hover{filter:brightness(1.15);}
+.ccy-switch{position:relative;}
+.ccy-drop{position:absolute;top:calc(100% + 6px);right:0;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:2px;min-width:120px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:200;animation:fadeSlideIn .12s ease;}
+.ccy-drop-opt{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;background:none;border:none;cursor:pointer;color:var(--text-secondary);font-size:12px;transition:background .12s,color .12s;white-space:nowrap;width:100%;text-align:left;}
+.ccy-drop-opt:hover{background:var(--bg-elevated);color:var(--text-primary);}
+.ccy-drop-opt.active{color:var(--gold);background:var(--accent-wash);}
+.ccy-drop-opt .mono{font-size:13px;font-weight:700;color:inherit;min-width:28px;}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 
 /* ---------- charts: date range picker ---------- */
 .date-range-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;}

@@ -19,6 +19,11 @@ const PAL = ["#b79cff", "#5fd0c6", "#6fb0ff", "#f4a6cf", "#8b8bff", "#f0bd8a"];
 
 const FX_COLOR_PALETTE = ["#6fb0ff", "#46d8a0", "#f0bd8a", "#b79cff", "#f4a6cf", "#8b8bff"];
 
+export const FALLBACK_FX_RATES: Record<string, number> = {
+  SGD: 1, USD: 1.36, EUR: 1.51, GBP: 1.72,
+  AUD: 0.88, JPY: 0.0091, INR: 0.016, HKD: 0.174,
+};
+
 export function buildFxColors(cards: CurrencyCard[]): Record<string, string> {
   const result: Record<string, string> = {};
   cards.forEach((c, i) => {
@@ -27,9 +32,9 @@ export function buildFxColors(cards: CurrencyCard[]): Record<string, string> {
   return result;
 }
 
-/** Returns SGD-per-unit rates for every non-SGD currency in the portfolio, plus SGD=1 */
+/** Returns SGD-per-unit rates. Portfolio rates take priority; static fallbacks fill the gaps. */
 export function buildBaseFxRates(cards: CurrencyCard[]): Record<string, number> {
-  const rates: Record<string, number> = { SGD: 1 };
+  const rates: Record<string, number> = { ...FALLBACK_FX_RATES };
   for (const c of cards) {
     if (c.cur > 0) rates[c.code] = c.cur;
   }

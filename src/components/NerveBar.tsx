@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { useCountUp } from "@/lib/useCountUp";
-import { pct } from "@/lib/formatters";
+import { pct, CCY_SYMBOL, SUPPORTED_CURRENCIES } from "@/lib/formatters";
 import { usePortfolio } from "@/context/portfolio";
 import { createClient } from "@/lib/supabase/client";
 import type { HeroStats } from "@/types/portfolio";
@@ -16,12 +16,35 @@ interface NerveBarProps {
 }
 
 export function NerveBar({ hero, animate = true, onTweaksToggle }: NerveBarProps) {
-  const { displayName, fmtVal, fmtSigned, baseCurrency } = usePortfolio();
+  const { displayName, fmtVal, fmtSigned, baseCurrency, setBaseCurrency } = usePortfolio();
   const total = useCountUp(hero.total, 1300, animate);
   const [spin, setSpin] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [ccyOpen, setCcyOpen] = useState(false);
+  const ccyRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const dayUp = hero.dayChange >= 0;
+
+  useEffect(() => {
+    if (!ccyOpen) return;
+    function handleOutside(e: MouseEvent) {
+      if (ccyRef.current && !ccyRef.current.contains(e.target as Node)) {
+        setCcyOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [ccyOpen]);
+
+  async function switchCurrency(c: string) {
+    setBaseCurrency(c);
+    setCcyOpen(false);
+    await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ baseCurrency: c }),
+    });
+  }
 
   const wordmark = displayName ? `${displayName}'s Portfolio` : "PORTFOLIO";
 
@@ -53,9 +76,30 @@ export function NerveBar({ hero, animate = true, onTweaksToggle }: NerveBarProps
             {fmtSigned(hero.fxImpact)}
           </span>
         </div>
-        {baseCurrency !== "SGD" && (
-          <div className="nr-ccy mono">{baseCurrency}</div>
-        )}
+        <div className="ccy-switch" ref={ccyRef}>
+          <button
+            className="nr-ccy mono"
+            onClick={() => setCcyOpen((v) => !v)}
+            title="Switch base currency"
+            style={{ cursor: "pointer", userSelect: "none" }}
+          >
+            {CCY_SYMBOL[baseCurrency] ?? baseCurrency} {baseCurrency} ▾
+          </button>
+          {ccyOpen && (
+            <div className="ccy-drop">
+              {SUPPORTED_CURRENCIES.map((c) => (
+                <button
+                  key={c}
+                  className={"ccy-drop-opt" + (c === baseCurrency ? " active" : "")}
+                  onClick={() => switchCurrency(c)}
+                >
+                  <span className="mono">{CCY_SYMBOL[c] ?? c}</span>
+                  <span className="ui">{c}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="nr-time mono">{hero.updated}</div>
         <button
           className={"refresh" + (spin ? " spin" : "")}

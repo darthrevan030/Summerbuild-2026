@@ -30,4 +30,7 @@ function ccySigned(n: number, ccy: string, d = 0): string {
   return (n < 0 ? "−" : "+") + sym + NF(n, d);
 }
 
-export { NF, sgd, sgdSigned, pct, rate, ccyFmt, ccySigned, CCY_SYMBOL };
+const SUPPORTED_CURRENCIES = ["SGD", "USD", "EUR", "GBP", "AUD", "JPY", "INR", "HKD"] as const;
+export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
+
+export { NF, sgd, sgdSigned, pct, rate, ccyFmt, ccySigned, CCY_SYMBOL, SUPPORTED_CURRENCIES };
