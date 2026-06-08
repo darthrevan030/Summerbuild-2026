@@ -6,10 +6,18 @@ interface FXAreaProps {
   data: Record<string, number>[];
   colors: Record<string, string>;
   keys: string[];
+  labels?: string[];   // "YYYY-MM" strings, same length as data
   height?: number;
+  valFmt?: (v: number) => string;
 }
 
-export function FXArea({ data, colors, keys, height = 230 }: FXAreaProps) {
+const MONS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmtYM(ym: string): string {
+  const [yr, mo] = ym.split("-");
+  return `${MONS[parseInt(mo) - 1]} ${yr.slice(2)}`;
+}
+
+export function FXArea({ data, colors, keys, labels, height = 230, valFmt }: FXAreaProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(640);
 
@@ -19,7 +27,7 @@ export function FXArea({ data, colors, keys, height = 230 }: FXAreaProps) {
     return () => ro.disconnect();
   }, []);
 
-  const padL = 8, padR = 8, padT = 14, padB = 18;
+  const padL = valFmt ? 68 : 8, padR = 8, padT = 14, padB = 22;
   const iw = w - padL - padR;
   const ih = height - padT - padB;
 
@@ -28,9 +36,18 @@ export function FXArea({ data, colors, keys, height = 230 }: FXAreaProps) {
   lo *= 1.1; hi *= 1.1;
   const rng = hi - lo || 1;
 
-  const X = (i: number) => padL + (i / (data.length - 1)) * iw;
+  const X = (i: number) => padL + (i / Math.max(data.length - 1, 1)) * iw;
   const Y = (v: number) => padT + ih - ((v - lo) / rng) * ih;
   const zeroY = Y(0);
+
+  const Y_TICKS = 4;
+  const yTicks = Array.from({ length: Y_TICKS + 1 }, (_, g) => ({
+    v: lo + (hi - lo) * (1 - g / Y_TICKS),
+    y: padT + (g / Y_TICKS) * ih,
+  }));
+
+  // X-axis date labels — show every ~6th point
+  const xTicks = data.filter((_, i) => i % Math.max(Math.floor(data.length / 6), 1) === 0 || i === data.length - 1);
 
   return (
     <div ref={wrapRef} style={{ position: "relative", width: "100%" }}>
@@ -43,7 +60,23 @@ export function FXArea({ data, colors, keys, height = 230 }: FXAreaProps) {
             </linearGradient>
           ))}
         </defs>
-        <line x1={padL} x2={w - padR} y1={zeroY} y2={zeroY} stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
+
+        {/* Y-axis grid + labels */}
+        {yTicks.map((t, g) => (
+          <g key={g}>
+            <line x1={padL} x2={w - padR} y1={t.y} y2={t.y} stroke="rgba(255,255,255,0.045)" strokeWidth="1" />
+            {valFmt && (
+              <text x={padL - 6} y={t.y + 4} fill="var(--text-muted)" fontSize="10" textAnchor="end" className="mono">
+                {valFmt(t.v)}
+              </text>
+            )}
+          </g>
+        ))}
+
+        {/* Zero line */}
+        <line x1={padL} x2={w - padR} y1={zeroY} y2={zeroY} stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+
+        {/* Data areas + lines */}
         {keys.map((k) => {
           const linePath = data.map((d, i) => `${i === 0 ? "M" : "L"}${X(i).toFixed(1)},${Y(d[k]).toFixed(1)}`).join(" ");
           const areaPath = `${linePath} L${X(data.length - 1)},${zeroY} L${X(0)},${zeroY} Z`;
@@ -52,6 +85,17 @@ export function FXArea({ data, colors, keys, height = 230 }: FXAreaProps) {
               <path d={areaPath} fill={`url(#fx${k})`} />
               <path d={linePath} fill="none" stroke={colors[k]} strokeWidth="1.75" strokeLinejoin="round" />
             </g>
+          );
+        })}
+
+        {/* X-axis date ticks */}
+        {labels && xTicks.map((_, k) => {
+          const i = data.indexOf(xTicks[k]);
+          if (i < 0 || !labels[i]) return null;
+          return (
+            <text key={k} x={X(i)} y={height - 6} fill="var(--text-muted)" fontSize="10" textAnchor="middle" className="mono">
+              {fmtYM(labels[i])}
+            </text>
           );
         })}
       </svg>

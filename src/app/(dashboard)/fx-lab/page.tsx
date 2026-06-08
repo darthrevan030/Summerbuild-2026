@@ -5,12 +5,14 @@ import { Icon } from "@/components/Icon";
 import { Spark } from "@/components/charts/Spark";
 import { useCountUp } from "@/lib/useCountUp";
 import { pct, rate } from "@/lib/formatters";
+import { useFxSparks } from "@/hooks/useFxSparks";
 import type { CurrencyCard, WaterfallItem } from "@/types/portfolio";
 
-function CcyCard({ c, delay }: { c: CurrencyCard; delay: string }) {
+function CcyCard({ c, delay, sparkOverride }: { c: CurrencyCard; delay: string; sparkOverride?: number[] }) {
   const { fmtVal, fmtSigned } = usePortfolio();
   const pos = c.impact >= 0;
   const col = pos ? "var(--fx-positive)" : "var(--fx-negative)";
+  const sparkPts = (sparkOverride && sparkOverride.length >= 2) ? sparkOverride : c.spark;
   return (
     <div className="card ccy-card reveal" style={{ animationDelay: delay }}>
       <div className="cc-head">
@@ -40,7 +42,7 @@ function CcyCard({ c, delay }: { c: CurrencyCard; delay: string }) {
           <div className="mono cc-impact" style={{ color: col }}>{fmtSigned(c.impact)}</div>
         </div>
         <div className="cc-spark">
-          {c.spark.length > 0 && <Spark pts={c.spark} color={col} w={132} h={40} />}
+          {sparkPts.length > 0 && <Spark pts={sparkPts} color={col} w={132} h={40} />}
         </div>
       </div>
     </div>
@@ -99,6 +101,7 @@ export default function FXLabPage() {
   const { hero, currencyCards, waterfallData, fmtVal } = usePortfolio();
   const actual  = useCountUp(hero.total,   1100);
   const neutral = useCountUp(hero.neutral, 1100);
+  const fxSparks = useFxSparks(currencyCards.map((c) => c.code));
 
   if (currencyCards.length === 0) {
     return (
@@ -152,7 +155,7 @@ export default function FXLabPage() {
       {/* currency cards grid */}
       <div className="ccy-grid">
         {currencyCards.map((c, i) => (
-          <CcyCard key={c.code} c={c} delay={(0.06 + i * 0.05) + "s"} />
+          <CcyCard key={c.code} c={c} delay={(0.06 + i * 0.05) + "s"} sparkOverride={fxSparks[c.code]} />
         ))}
       </div>
 

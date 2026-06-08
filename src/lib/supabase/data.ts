@@ -156,18 +156,17 @@ export async function updateHoldingPrice(
   id: string,
   currentPrice: number,
   currentFxRate: number,
-  userId: string
+  userId: string,
+  sparkData?: number[]
 ): Promise<void> {
   const supabase = await makeServerClient();
-  await supabase
-    .from("holdings")
-    .update({
-      current_price: currentPrice,
-      current_fx_rate: currentFxRate,
-      price_refreshed_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .eq("user_id", userId);
+  const patch: Record<string, unknown> = {
+    current_price: currentPrice,
+    current_fx_rate: currentFxRate,
+    price_refreshed_at: new Date().toISOString(),
+  };
+  if (sparkData && sparkData.length >= 2) patch.spark_data = sparkData;
+  await supabase.from("holdings").update(patch).eq("id", id).eq("user_id", userId);
 }
 
 export async function deleteHolding(id: string, userId = DEMO_USER): Promise<void> {
@@ -180,12 +179,13 @@ export async function fetchUserSettings(userId: string): Promise<UserSettings> {
   const supabase = await makeServerClient();
   const { data } = await supabase
     .from("user_settings")
-    .select("display_name, base_currency")
+    .select("display_name, base_currency, role")
     .eq("user_id", userId)
     .single();
   return {
     displayName: data?.display_name ?? "",
     baseCurrency: data?.base_currency ?? "SGD",
+    role: data?.role ?? "user",
   };
 }
 

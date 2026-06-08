@@ -1,5 +1,5 @@
 import { fetchHoldings, updateHoldingPrice } from "@/lib/supabase/data";
-import { fetchLivePrices, fetchLiveFxRates } from "@/lib/prices";
+import { fetchLivePrices, fetchLiveFxRates, fetchCryptoSparks } from "@/lib/prices";
 import { createClient } from "@/lib/supabase/server";
 
 async function getAuthUser() {
@@ -29,9 +29,10 @@ export async function POST() {
   // Unique non-placeholder tickers across all stale holdings
   const tickers = [...new Set(stale.map((h) => h.ticker).filter((t) => t !== "—"))];
 
-  const [livePrices, liveFxRates] = await Promise.all([
+  const [livePrices, liveFxRates, cryptoSparks] = await Promise.all([
     fetchLivePrices(tickers),
     fetchLiveFxRates(),
+    fetchCryptoSparks(tickers),
   ]);
 
   // Always write back (resets price_refreshed_at), using live price where available
@@ -45,6 +46,7 @@ export async function POST() {
         newPrice && newPrice > 0 ? newPrice : h.currentPrice,
         newFx    && newFx    > 0 ? newFx    : h.currentFxRate,
         user.id,
+        cryptoSparks[h.ticker],
       );
     })
   );

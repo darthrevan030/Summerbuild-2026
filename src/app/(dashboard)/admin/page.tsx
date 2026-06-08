@@ -3,6 +3,8 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { RoleToggle } from "./RoleToggle";
+import { CurrencyToggle } from "./CurrencyToggle";
+import type { CurrencyRow } from "@/app/api/currencies/route";
 
 interface AdminUserRow {
   id: string;
@@ -20,7 +22,6 @@ interface StaleTicker {
   priceRefreshedAt: string | null;
 }
 
-const SUPPORTED_CURRENCIES = ["SGD", "USD", "EUR", "GBP", "AUD", "JPY", "INR", "HKD"];
 
 export default async function AdminPage() {
   // --- Auth: cookie-based check ---
@@ -49,6 +50,7 @@ export default async function AdminPage() {
     { count: totalHoldings },
     { data: staleRows },
     { count: staleCount },
+    { data: currencyRows },
   ] = await Promise.all([
     adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 }),
     supabase.from("user_settings").select("user_id, display_name, role"),
@@ -63,6 +65,10 @@ export default async function AdminPage() {
       .from("holdings")
       .select("*", { count: "exact", head: true })
       .or(`price_refreshed_at.is.null,price_refreshed_at.lt.${staleThreshold}`),
+    supabase
+      .from("currencies")
+      .select("code, label, active, display_order")
+      .order("display_order"),
   ]);
 
   // Build per-user holding counts
@@ -231,15 +237,17 @@ export default async function AdminPage() {
         )}
       </div>
 
-      {/* Supported currencies */}
+      {/* Currency editor */}
       <div className="card reveal" style={{ animationDelay: ".18s" }}>
         <div className="card-head">
           <span className="card-title">Supported Currencies</span>
-          <span className="ui muted xs">display only</span>
+          <span className="ui muted">
+            {(currencyRows ?? []).filter((c: CurrencyRow) => c.active).length} active
+          </span>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", paddingTop: 4 }}>
-          {SUPPORTED_CURRENCIES.map((c) => (
-            <span key={c} className="driver">{c}</span>
+        <div>
+          {(currencyRows ?? []).map((c: CurrencyRow) => (
+            <CurrencyToggle key={c.code} currency={c} />
           ))}
         </div>
       </div>

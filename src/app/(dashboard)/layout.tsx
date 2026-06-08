@@ -20,7 +20,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const [holdings, userSettings] = await Promise.all([
     fetchHoldings(user?.id),
-    user ? fetchUserSettings(user.id) : Promise.resolve({ displayName: "", baseCurrency: "SGD" }),
+    user ? fetchUserSettings(user.id) : Promise.resolve({ displayName: "", baseCurrency: "SGD", role: "user" }),
   ]);
 
   const hero = computeHeroStats(holdings);
@@ -29,8 +29,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const movers = computeMovers(holdings);
   const currencyCards = computeCurrencyCards(holdings);
   const waterfallData = computeWaterfall(currencyCards);
-  const portfolioSeries = generatePortfolioSeries(hero.total);
-  const { series: fxSeries, fxLabels } = generateFxSeries(currencyCards);
+  const portfolioSeries = generatePortfolioSeries(holdings);
+  const { series: fxSeries, fxLabels } = generateFxSeries(currencyCards, holdings);
   const fxColors = buildFxColors(currencyCards);
   const baseFxRates = buildBaseFxRates(currencyCards);
 
@@ -50,6 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       baseFxRates={baseFxRates}
       initialDisplayName={userSettings.displayName}
       initialBaseCurrency={userSettings.baseCurrency}
+      initialRole={userSettings.role}
     >
       {children}
     </DashboardShell>

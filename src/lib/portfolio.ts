@@ -157,25 +157,60 @@ export function computeWaterfall(cards: CurrencyCard[]): WaterfallItem[] {
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export function generatePortfolioSeries(total: number): PortfolioSeriesPoint[] {
-  const start = total * 0.82;
+export function generatePortfolioSeries(holdings: HoldingRow[]): PortfolioSeriesPoint[] {
+  if (holdings.length === 0) return [];
+
+  const now = new Date();
+  const nowYr = now.getFullYear();
+  const nowMo = now.getMonth(); // 0-indexed
+
+  const earliest = holdings.reduce((min, h) => (h.buyDate < min ? h.buyDate : min), holdings[0].buyDate);
+  const startYr = parseInt(earliest.slice(0, 4));
+  const startMo = parseInt(earliest.slice(5, 7)) - 1;
+  const totalMonths = (nowYr - startYr) * 12 + (nowMo - startMo) + 1;
+  if (totalMonths <= 0) return [];
+
   const series: PortfolioSeriesPoint[] = [];
-  let yr = 2023, mo = 0;
-  for (let i = 0; i < 42; i++) {
-    const t = i / 41;
-    const trend = start + (total - start) * (t * 0.55 + Math.pow(t, 1.7) * 0.45);
-    const wob = Math.sin(i * 0.7) * (total * 0.013) + Math.sin(i * 1.9 + 1) * (total * 0.007) + Math.sin(i * 0.33) * (total * 0.009);
-    const v = Math.round((trend + wob) / 100) * 100;
-    series.push({ label: `${MON[mo]} ${String(yr).slice(2)}`, v });
+  let yr = startYr, mo = startMo;
+
+  for (let i = 0; i < totalMonths; i++) {
+    const date = `${yr}-${String(mo + 1).padStart(2, "0")}`;
+    const isLast = i === totalMonths - 1;
+    let v = 0;
+
+    for (const h of holdings) {
+      if (h.buyDate.slice(0, 7) > date) continue; // not yet owned
+
+      if (isLast) {
+        v += h.valueSGD;
+      } else {
+        const buyYr = parseInt(h.buyDate.slice(0, 4));
+        const buyMo = parseInt(h.buyDate.slice(5, 7)) - 1;
+        const buyIdx = (buyYr - startYr) * 12 + (buyMo - startMo);
+        const totalAge = totalMonths - 1 - buyIdx;
+        const t = totalAge > 0 ? (i - buyIdx) / totalAge : 1;
+        const trend = h.costSGD + (h.valueSGD - h.costSGD) * t;
+        // Deterministic noise per holding+month so chart is stable across re-renders
+        const seed = h.ticker.charCodeAt(0) * 17 + i;
+        const amp = Math.abs(h.valueSGD) * 0.018;
+        v += trend + Math.sin(seed * 0.7) * amp * 0.7 + Math.sin(seed * 1.9 + 1) * amp * 0.3;
+      }
+    }
+
+    series.push({ label: `${MON[mo]} ${String(yr).slice(2)}`, date, v: Math.max(0, Math.round(v)) });
     mo++;
     if (mo > 11) { mo = 0; yr++; }
   }
-  series[series.length - 1].v = Math.round(total);
+
+  // Pin last point to exact current total
+  const total = holdings.reduce((s, h) => s + h.valueSGD, 0);
+  if (series.length > 0) series[series.length - 1].v = Math.round(total);
+
   return series;
 }
 
 /** Generates simulated FX impact series. Returns series data + YYYY-MM date strings. */
-export function generateFxSeries(currencyCards: CurrencyCard[]): {
+export function generateFxSeries(currencyCards: CurrencyCard[], holdings: HoldingRow[]): {
   series: FxSeriesPoint[];
   fxLabels: string[];
 } {
@@ -184,14 +219,27 @@ export function generateFxSeries(currencyCards: CurrencyCard[]): {
     finals[c.code.toLowerCase()] = Math.round(c.impact);
   }
   const keys = Object.keys(finals);
+  if (keys.length === 0) return { series: [], fxLabels: [] };
+
+  const now = new Date();
+  const nowYr = now.getFullYear();
+  const nowMo = now.getMonth();
+
+  const fxHoldings = holdings.filter((h) => h.currency !== "SGD");
+  const earliest = fxHoldings.length > 0
+    ? fxHoldings.reduce((min, h) => (h.buyDate < min ? h.buyDate : min), fxHoldings[0].buyDate)
+    : `${nowYr - 1}-01`;
+  const startYr = parseInt(earliest.slice(0, 4));
+  const startMo = parseInt(earliest.slice(5, 7)) - 1;
+  const totalMonths = Math.max((nowYr - startYr) * 12 + (nowMo - startMo) + 1, 2);
 
   const series: FxSeriesPoint[] = [];
   const fxLabels: string[] = [];
-  let yr = 2023, mo = 0;
+  let yr = startYr, mo = startMo;
 
-  for (let i = 0; i < 42; i++) {
+  for (let i = 0; i < totalMonths; i++) {
     fxLabels.push(`${yr}-${String(mo + 1).padStart(2, "0")}`);
-    const t = i / 41;
+    const t = totalMonths > 1 ? i / (totalMonths - 1) : 1;
     const ease = t * t * (3 - 2 * t);
     const wobFor = (val: number, seed: number) =>
       Math.sin(i * 0.6 + seed) * (Math.abs(val) * 0.07);
@@ -205,9 +253,8 @@ export function generateFxSeries(currencyCards: CurrencyCard[]): {
     if (mo > 11) { mo = 0; yr++; }
   }
 
-  // pin last point to exact finals
   const last = series[series.length - 1];
-  for (const k of keys) last[k] = finals[k];
+  if (last) for (const k of keys) last[k] = finals[k];
 
   return { series, fxLabels };
 }

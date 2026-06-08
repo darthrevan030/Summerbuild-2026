@@ -1,14 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { usePortfolio } from "@/context/portfolio";
 import { Icon } from "@/components/Icon";
-import { CCY_SYMBOL, SUPPORTED_CURRENCIES } from "@/lib/formatters";
+import { CCY_SYMBOL } from "@/lib/formatters";
+import { useCurrencies } from "@/hooks/useCurrencies";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 export default function SettingsPage() {
-  const { displayName, baseCurrency, baseFxRates, fxColors, setDisplayName, setBaseCurrency } = usePortfolio();
+  const { displayName, baseCurrency, baseFxRates, fxColors, role, setDisplayName, setBaseCurrency } = usePortfolio();
+  const currencies = useCurrencies();
+  const router = useRouter();
 
   const [nameInput, setNameInput] = useState(displayName);
   const [ccyInput, setCcyInput] = useState(baseCurrency);
@@ -85,7 +89,7 @@ export default function SettingsPage() {
             <span className="ui muted">all portfolio totals convert to this currency</span>
           </div>
           <div className="ccy-picker">
-            {SUPPORTED_CURRENCIES.map((c) => (
+            {currencies.map((c) => (
               <button
                 key={c}
                 type="button"
@@ -141,6 +145,25 @@ export default function SettingsPage() {
         </div>
 
       </form>
+
+      {role === "admin" && (
+        <div className="card reveal" style={{ animationDelay: ".14s" }}>
+          <div className="card-head">
+            <span className="card-title">Admin</span>
+            <span className="sent-pill bull">admin</span>
+          </div>
+          <p className="ui muted" style={{ fontSize: 13, marginBottom: 14 }}>
+            Manage users, price cache health, and supported currencies.
+          </p>
+          <button
+            className="btn-gold"
+            style={{ margin: 0, padding: "11px 20px", gridColumn: "auto" }}
+            onClick={() => router.push("/admin")}
+          >
+            <Icon name="sliders" size={14} /> Admin Dashboard
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -29,6 +29,7 @@ interface PortfolioContextValue {
   // user settings — mutable
   displayName: string;
   baseCurrency: string;
+  role: string;
   setDisplayName: (v: string) => void;
   setBaseCurrency: (v: string) => void;
   // derived converters
@@ -38,9 +39,10 @@ interface PortfolioContextValue {
 }
 
 interface ProviderProps {
-  value: Omit<PortfolioContextValue, "displayName" | "baseCurrency" | "setDisplayName" | "setBaseCurrency" | "toBase" | "fmtVal" | "fmtSigned"> & {
+  value: Omit<PortfolioContextValue, "displayName" | "baseCurrency" | "role" | "setDisplayName" | "setBaseCurrency" | "toBase" | "fmtVal" | "fmtSigned"> & {
     initialDisplayName: string;
     initialBaseCurrency: string;
+    initialRole: string;
   };
   children: React.ReactNode;
 }
@@ -50,6 +52,7 @@ const PortfolioContext = createContext<PortfolioContextValue | null>(null);
 export function PortfolioProvider({ value, children }: ProviderProps) {
   const [displayName, setDisplayName] = useState(value.initialDisplayName);
   const [baseCurrency, setBaseCurrency] = useState(value.initialBaseCurrency);
+  const role = value.initialRole;
 
   const toBase = useCallback(
     (sgdVal: number) => {
@@ -73,6 +76,7 @@ export function PortfolioProvider({ value, children }: ProviderProps) {
     ...value,
     displayName,
     baseCurrency,
+    role,
     setDisplayName,
     setBaseCurrency,
     toBase,

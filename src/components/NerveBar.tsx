@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { useCountUp } from "@/lib/useCountUp";
-import { pct, CCY_SYMBOL, SUPPORTED_CURRENCIES } from "@/lib/formatters";
+import { pct, CCY_SYMBOL } from "@/lib/formatters";
+import { useCurrencies } from "@/hooks/useCurrencies";
 import { usePortfolio } from "@/context/portfolio";
 import { createClient } from "@/lib/supabase/client";
 import type { HeroStats } from "@/types/portfolio";
@@ -17,6 +18,7 @@ interface NerveBarProps {
 
 export function NerveBar({ hero, animate = true, onTweaksToggle }: NerveBarProps) {
   const { displayName, fmtVal, fmtSigned, baseCurrency, setBaseCurrency } = usePortfolio();
+  const currencies = useCurrencies();
   const total = useCountUp(hero.total, 1300, animate);
   const [spin, setSpin] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -101,7 +103,7 @@ export function NerveBar({ hero, animate = true, onTweaksToggle }: NerveBarProps
               className="ccy-drop"
               style={{ position: "fixed", top: dropPos.top, right: dropPos.right }}
             >
-              {SUPPORTED_CURRENCIES.map((c) => (
+              {currencies.map((c) => (
                 <button
                   key={c}
                   className={"ccy-drop-opt" + (c === baseCurrency ? " active" : "")}

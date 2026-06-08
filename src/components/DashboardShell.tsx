@@ -33,6 +33,7 @@ interface DashboardShellProps {
   baseFxRates: Record<string, number>;
   initialDisplayName: string;
   initialBaseCurrency: string;
+  initialRole: string;
   children: React.ReactNode;
 }
 
@@ -40,19 +41,19 @@ export function DashboardShell({
   holdings, hero, assetAllocation, geoAllocation,
   movers, currencyCards, waterfallData,
   portfolioSeries, fxSeries, fxLabels, fxColors, baseFxRates,
-  initialDisplayName, initialBaseCurrency,
+  initialDisplayName, initialBaseCurrency, initialRole,
   children,
 }: DashboardShellProps) {
   const [tweaksOpen, setTweaksOpen] = useState(false);
   const pathname = usePathname();
-  const showSidebar = pathname !== "/overview";
+  const showSidebar = !["/overview", "/settings", "/admin"].includes(pathname);
 
   return (
     <PortfolioProvider value={{
       holdings, hero, assetAllocation, geoAllocation,
       movers, currencyCards, waterfallData,
       portfolioSeries, fxSeries, fxLabels, fxColors, baseFxRates,
-      initialDisplayName, initialBaseCurrency,
+      initialDisplayName, initialBaseCurrency, initialRole,
     }}>
       <div className="app">
         <NerveBar hero={hero} animate onTweaksToggle={() => setTweaksOpen((o) => !o)} />

@@ -9,13 +9,6 @@ import { FXArea } from "@/components/charts/FXArea";
 import { pct } from "@/lib/formatters";
 import { useDateRange, RANGES } from "@/lib/useDateRange";
 
-/** Maps portfolioSeries index → "YYYY-MM" (series starts Jan 2023) */
-function seriesIndexToYM(i: number): string {
-  const yr = 2023 + Math.floor(i / 12);
-  const mo = (i % 12) + 1;
-  return `${yr}-${String(mo).padStart(2, "0")}`;
-}
-
 function RangeBar({
   activePreset,
   showCustom,
@@ -54,7 +47,7 @@ function PortfolioTrend() {
   const { portfolioSeries, fmtVal, fmtSigned } = usePortfolio();
 
   const seriesLabels = useMemo(
-    () => portfolioSeries.map((_, i) => seriesIndexToYM(i)),
+    () => portfolioSeries.map((p) => p.date),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [portfolioSeries.length]
   );
@@ -150,7 +143,7 @@ function PerfBars() {
 }
 
 function FXImpactCard() {
-  const { fxSeries, fxColors, fxLabels, baseCurrency } = usePortfolio();
+  const { fxSeries, fxColors, fxLabels, baseCurrency, fmtSigned } = usePortfolio();
 
   const {
     startDate, endDate, minDate, maxDate,
@@ -160,11 +153,11 @@ function FXImpactCard() {
 
   const fxKeys = Object.keys(fxColors);
 
-  const filteredSeries = useMemo(() => {
+  const { filteredSeries, filteredLabels } = useMemo(() => {
     const si = fxLabels.indexOf(startDate);
     const ei = fxLabels.indexOf(endDate);
-    if (si === -1 || ei === -1 || si > ei) return fxSeries;
-    return fxSeries.slice(si, ei + 1);
+    if (si === -1 || ei === -1 || si > ei) return { filteredSeries: fxSeries, filteredLabels: fxLabels };
+    return { filteredSeries: fxSeries.slice(si, ei + 1), filteredLabels: fxLabels.slice(si, ei + 1) };
   }, [fxSeries, fxLabels, startDate, endDate]);
 
   return (
@@ -200,7 +193,7 @@ function FXImpactCard() {
               <button className="date-reset ui muted" onClick={() => selectPreset(999)}>Reset</button>
             </div>
           )}
-          <FXArea key={startDate + endDate} data={filteredSeries} colors={fxColors} keys={fxKeys} height={210} />
+          <FXArea key={startDate + endDate} data={filteredSeries} colors={fxColors} keys={fxKeys} labels={filteredLabels} height={210} valFmt={fmtSigned} />
           <div className="fx-legend">
             {fxKeys.map((k) => (
               <span key={k}>

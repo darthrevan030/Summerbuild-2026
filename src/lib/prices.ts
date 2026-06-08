@@ -4,6 +4,31 @@ const CRYPTO_IDS: Record<string, string> = {
 };
 const GOLD_TICKERS = new Set(["GOLD", "XAU", "GLD"]);
 
+/** 30-day daily closes for crypto tickers via CoinGecko market_chart. Returns {} on any failure. */
+export async function fetchCryptoSparks(
+  tickers: string[]
+): Promise<Record<string, number[]>> {
+  const crypto = tickers.filter((t) => CRYPTO_IDS[t]);
+  if (crypto.length === 0) return {};
+
+  const results: Record<string, number[]> = {};
+  await Promise.all(
+    crypto.map(async (ticker) => {
+      try {
+        const id = CRYPTO_IDS[ticker];
+        const res = await fetch(
+          `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=30&interval=daily`
+        );
+        if (!res.ok) return;
+        const json = await res.json();
+        const closes = (json.prices as [number, number][]).map(([, p]) => p);
+        if (closes.length >= 2) results[ticker] = closes;
+      } catch {}
+    })
+  );
+  return results;
+}
+
 export async function fetchLivePrices(tickers: string[]): Promise<Record<string, number>> {
   const prices: Record<string, number> = {};
   if (tickers.length === 0) return prices;
