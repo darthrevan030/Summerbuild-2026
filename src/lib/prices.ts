@@ -4,6 +4,57 @@ const CRYPTO_IDS: Record<string, string> = {
 };
 const GOLD_TICKERS = new Set(["GOLD", "XAU", "GLD"]);
 
+// EODHD exchange suffix by holding currency.
+// If the user enters "VWRA.LSE" the dot takes precedence and this map is bypassed.
+const EODHD_EXCHANGE: Record<string, string> = {
+  USD: "US",
+  GBP: "LSE",
+  EUR: "XETRA",   // Deutsche Börse — most liquid European exchange
+  JPY: "TSE",
+  INR: "NSE",
+  HKD: "HKEX",
+  SGD: "SG",
+  AUD: "ASX",
+  CNY: "SHG",     // Shanghai
+  CNH: "SHG",
+};
+
+// Finnhub uses "EXCHANGE:TICKER" for non-US. US stocks use bare ticker.
+const FINNHUB_PREFIX: Record<string, string> = {
+  GBP: "LSE:",
+  EUR: "XETRA:",
+  JPY: "TSE:",
+  INR: "NSE:",
+  HKD: "HKEX:",
+  SGD: "SGX:",
+  AUD: "ASX:",
+  CNY: "SHG:",
+  CNH: "SHG:",
+};
+
+/**
+ * Returns the EODHD real-time symbol for a ticker.
+ * If the ticker already contains a dot (e.g. "VWRA.LSE") it's used as-is.
+ * Otherwise the holding's currency is used to pick the exchange suffix.
+ */
+function toEohdSymbol(ticker: string, currency: string): string {
+  if (ticker.includes(".")) return ticker;
+  const exchange = EODHD_EXCHANGE[currency] ?? "US";
+  return `${ticker}.${exchange}`;
+}
+
+/**
+ * Returns the Finnhub symbol for a ticker.
+ * Non-USD holdings get a "EXCHANGE:" prefix; USD/unknown get bare ticker.
+ * If the ticker already has a dot (EODHD format like "VWRA.LSE"), strip the suffix
+ * and apply the Finnhub prefix instead.
+ */
+function toFinnhubSymbol(ticker: string, currency: string): string {
+  const base = ticker.includes(".") ? ticker.split(".")[0] : ticker;
+  const prefix = FINNHUB_PREFIX[currency] ?? "";
+  return `${prefix}${base}`;
+}
+
 /** 30-day daily closes for crypto tickers via CoinGecko market_chart. Returns {} on any failure. */
 export async function fetchCryptoSparks(
   tickers: string[]
@@ -29,7 +80,14 @@ export async function fetchCryptoSparks(
   return results;
 }
 
-export async function fetchLivePrices(tickers: string[]): Promise<Record<string, number>> {
+/**
+ * Fetches live prices for all tickers.
+ * tickerCurrency maps ticker → holding currency so the correct exchange is used.
+ */
+export async function fetchLivePrices(
+  tickers: string[],
+  tickerCurrency: Record<string, string> = {}
+): Promise<Record<string, number>> {
   const prices: Record<string, number> = {};
   if (tickers.length === 0) return prices;
 
@@ -65,13 +123,15 @@ export async function fetchLivePrices(tickers: string[]): Promise<Record<string,
     equities.length > 0 && process.env.EODHD_API_KEY && (async () => {
       await Promise.all(
         equities.map(async (ticker) => {
-          const res = await fetch(
-            `https://eodhd.com/api/real-time/${ticker}.US?api_token=${process.env.EODHD_API_KEY}&fmt=json`
-          );
-          if (res.ok) {
+          const symbol = toEohdSymbol(ticker, tickerCurrency[ticker] ?? "USD");
+          try {
+            const res = await fetch(
+              `https://eodhd.com/api/real-time/${symbol}?api_token=${process.env.EODHD_API_KEY}&fmt=json`
+            );
+            if (!res.ok) return;
             const json = await res.json();
             if (json.close) prices[ticker] = json.close;
-          }
+          } catch {}
         })
       );
     })(),
@@ -80,9 +140,14 @@ export async function fetchLivePrices(tickers: string[]): Promise<Record<string,
   return prices;
 }
 
-/** 30-day daily closes for equity tickers via Finnhub stock/candle. Returns {} on any failure or missing key. */
+/**
+ * 30-day daily closes for equity tickers via Finnhub stock/candle.
+ * tickerCurrency maps ticker → holding currency for correct exchange prefix.
+ * Returns {} on any failure or missing key.
+ */
 export async function fetchEquitySparks(
-  tickers: string[]
+  tickers: string[],
+  tickerCurrency: Record<string, string> = {}
 ): Promise<Record<string, number[]>> {
   const key = process.env.FINNHUB_API_KEY;
   if (!key) return {};
@@ -96,9 +161,10 @@ export async function fetchEquitySparks(
   const results: Record<string, number[]> = {};
   await Promise.all(
     equities.map(async (ticker) => {
+      const symbol = toFinnhubSymbol(ticker, tickerCurrency[ticker] ?? "USD");
       try {
         const res = await fetch(
-          `https://finnhub.io/api/v1/stock/candle?symbol=${ticker}&resolution=D&from=${from}&to=${now}&token=${key}`
+          `https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=D&from=${from}&to=${now}&token=${key}`
         );
         if (!res.ok) return;
         const json = await res.json();
@@ -110,7 +176,11 @@ export async function fetchEquitySparks(
   return results;
 }
 
-/** Frankfurter.app — free, no key, SGD-based rates. Returns {} on failure. */
+/**
+ * Frankfurter.app — free, no key. Returns SGD-per-foreign rates.
+ * Frankfurter with base=SGD gives {USD: 0.777} = "1 SGD buys 0.777 USD" (foreign per SGD).
+ * We invert to get "SGD per 1 foreign unit" so the formula units*price*fxRate works correctly.
+ */
 export async function fetchLiveFxRates(): Promise<Record<string, number>> {
   try {
     const res = await fetch("https://api.frankfurter.app/latest?base=SGD", {
@@ -118,7 +188,10 @@ export async function fetchLiveFxRates(): Promise<Record<string, number>> {
     });
     if (!res.ok) return {};
     const json = await res.json();
-    return json.rates as Record<string, number>;
+    const raw = json.rates as Record<string, number>;
+    return Object.fromEntries(
+      Object.entries(raw).filter(([, r]) => r > 0).map(([ccy, r]) => [ccy, 1 / r])
+    );
   } catch {
     return {};
   }

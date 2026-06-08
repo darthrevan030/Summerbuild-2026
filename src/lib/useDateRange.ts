@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 
+// months = calendar months to look back; 999 = "All"
 export const RANGES: [string, number][] = [
-  ["1D", 1], ["1W", 2], ["1M", 3], ["3M", 4],
-  ["6M", 7], ["1Y", 13], ["3Y", 37], ["All", 999],
+  ["1M", 1], ["3M", 3], ["6M", 6], ["1Y", 12], ["3Y", 36], ["All", 999],
 ];
-export const DEFAULT_N = 13; // 1Y
+export const DEFAULT_N = 12; // 1Y
 
 export interface DateRange {
   startDate: string;
@@ -21,24 +21,29 @@ export interface DateRange {
   toggleCustom: () => void;
 }
 
+/** Returns the YYYY-MM string that is `months` calendar months before today, clamped to minDate. */
+function calendarStart(months: number, minDate: string): string {
+  if (months >= 999) return minDate;
+  const d = new Date();
+  d.setMonth(d.getMonth() - months + 1);
+  const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return ym < minDate ? minDate : ym;
+}
+
 export function useDateRange(labels: string[], defaultN = DEFAULT_N): DateRange {
-  const minDate = labels[0] ?? "2023-01";
-  const maxDate = labels[labels.length - 1] ?? "2026-06";
+  const minDate = labels[0] ?? new Date().toISOString().slice(0, 7);
+  const maxDate = labels[labels.length - 1] ?? new Date().toISOString().slice(0, 7);
 
-  function presetStart(n: number): string {
-    return labels[Math.max(0, labels.length - n)] ?? minDate;
-  }
-
-  const [startDate, setStartDate] = useState(() => presetStart(defaultN));
+  const [startDate, setStartDate] = useState(() => calendarStart(defaultN, minDate));
   const [endDate,   setEndDate]   = useState(maxDate);
   const [showCustom, setShowCustom] = useState(false);
 
   const activePreset = RANGES.findIndex(
-    ([, n]) => startDate === presetStart(n) && endDate === maxDate
+    ([, n]) => startDate === calendarStart(n, minDate) && endDate === maxDate
   );
 
   function selectPreset(n: number) {
-    setStartDate(presetStart(n));
+    setStartDate(calendarStart(n, minDate));
     setEndDate(maxDate);
     setShowCustom(false);
   }

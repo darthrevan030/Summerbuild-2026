@@ -276,12 +276,12 @@ export default function HoldingsPage() {
     setRefreshMsg("");
     try {
       const { refreshed, skipped } = await refreshHoldingPrices();
-      if (refreshed > 0) {
-        setRefreshMsg(`Updated ${refreshed} holding${refreshed > 1 ? "s" : ""}${skipped > 0 ? ` · ${skipped} already fresh` : ""}`);
-        router.refresh();
-      } else {
-        setRefreshMsg("All prices up to date");
-      }
+      setRefreshMsg(
+        refreshed > 0
+          ? `Updated ${refreshed} holding${refreshed > 1 ? "s" : ""}${skipped > 0 ? ` · ${skipped} already fresh` : ""}`
+          : "Prices up to date — snapshot recorded"
+      );
+      router.refresh();
     } catch {
       setRefreshMsg("Refresh failed");
     } finally {

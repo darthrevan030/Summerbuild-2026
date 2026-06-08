@@ -23,6 +23,8 @@ export async function POST() {
   const stale = holdings.filter((h) => isStale(h.priceRefreshedAt));
 
   if (stale.length === 0) {
+    // Prices still fresh — but always snapshot so the charts have today's data point
+    await recordSnapshot(user.id, holdings);
     return Response.json({ refreshed: 0, skipped: holdings.length });
   }
 

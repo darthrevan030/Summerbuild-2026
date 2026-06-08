@@ -8,6 +8,7 @@ import { pct, CCY_SYMBOL } from "@/lib/formatters";
 import { useCurrencies } from "@/hooks/useCurrencies";
 import { usePortfolio } from "@/context/portfolio";
 import { createClient } from "@/lib/supabase/client";
+import { refreshHoldingPrices } from "@/lib/api-client";
 import type { HeroStats } from "@/types/portfolio";
 
 interface NerveBarProps {
@@ -119,8 +120,17 @@ export function NerveBar({ hero, animate = true, onTweaksToggle }: NerveBarProps
         <div className="nr-time mono">{hero.updated}</div>
         <button
           className={"refresh" + (spin ? " spin" : "")}
-          onClick={() => { setSpin(true); setTimeout(() => setSpin(false), 800); }}
-          title="Refresh"
+          onClick={async () => {
+            setSpin(true);
+            try {
+              await refreshHoldingPrices();
+              router.refresh();
+            } finally {
+              setSpin(false);
+            }
+          }}
+          title="Refresh prices"
+          disabled={spin}
         >
           <Icon name="refresh" size={16} />
         </button>
