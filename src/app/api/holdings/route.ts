@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
     current_fx_rate: Number(current_fx_rate ?? buy_fx_rate ?? 1),
     spark_data: Array.isArray(spark_data) ? spark_data : [],
     notes: notes ? String(notes) : null,
+    price_refreshed_at: null,
   });
 
   if (!row) {
