@@ -8,43 +8,136 @@ import { AreaTrend } from "@/components/charts/AreaTrend";
 import { FXArea } from "@/components/charts/FXArea";
 import { pct } from "@/lib/formatters";
 
-const RANGES: [string, number][] = [["6M", 6], ["1Y", 12], ["3Y", 36], ["All", 999]];
+const RANGES: [string, number][] = [
+  ["1D", 1], ["1W", 2], ["1M", 3], ["3M", 4],
+  ["6M", 7], ["1Y", 13], ["3Y", 37], ["All", 999],
+];
+const DEFAULT_N = 13; // 1Y
+
+/** Maps portfolioSeries index → "YYYY-MM" (series starts Jan 2023) */
+function seriesIndexToYM(i: number): string {
+  const yr = 2023 + Math.floor(i / 12);
+  const mo = (i % 12) + 1;
+  return `${yr}-${String(mo).padStart(2, "0")}`;
+}
+
+function RangeBar({
+  activePreset,
+  showCustom,
+  onPreset,
+  onCustomToggle,
+}: {
+  activePreset: number;
+  showCustom: boolean;
+  onPreset: (n: number) => void;
+  onCustomToggle: () => void;
+}) {
+  return (
+    <div className="chart-range-row">
+      <div className="rsel">
+        {RANGES.map(([lab, n], i) => (
+          <button
+            key={lab}
+            className={"rseg" + (i === activePreset ? " active" : "")}
+            onClick={() => onPreset(n)}
+          >
+            {lab}
+          </button>
+        ))}
+        <button
+          className={"rseg rseg-custom" + (showCustom ? " active" : "")}
+          onClick={onCustomToggle}
+        >
+          Custom
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function PortfolioTrend() {
   const { portfolioSeries, fmtVal, fmtSigned } = usePortfolio();
-  const [ri, setRi] = useState(1);
-  const n = Math.min(RANGES[ri][1], portfolioSeries.length);
-  const data = portfolioSeries.slice(portfolioSeries.length - n);
+
+  const seriesLabels = useMemo(
+    () => portfolioSeries.map((_, i) => seriesIndexToYM(i)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [portfolioSeries.length]
+  );
+
+  const minDate = seriesLabels[0] ?? "2023-01";
+  const maxDate = seriesLabels[seriesLabels.length - 1] ?? "2026-06";
+
+  function presetStart(n: number) {
+    return seriesLabels[Math.max(0, seriesLabels.length - n)] ?? minDate;
+  }
+
+  const [startDate, setStartDate] = useState(() => presetStart(DEFAULT_N));
+  const [endDate, setEndDate] = useState(maxDate);
+  const [showCustom, setShowCustom] = useState(false);
+
+  const activePreset = RANGES.findIndex(([, n]) => startDate === presetStart(n) && endDate === maxDate);
+
+  function selectPreset(n: number) {
+    setStartDate(presetStart(n));
+    setEndDate(maxDate);
+    setShowCustom(false);
+  }
+
+  function handleStartChange(v: string) {
+    setStartDate(v);
+    if (v > endDate) setEndDate(v);
+  }
+  function handleEndChange(v: string) {
+    setEndDate(v);
+    if (v < startDate) setStartDate(v);
+  }
+
+  const data = useMemo(() => {
+    const si = seriesLabels.indexOf(startDate);
+    const ei = seriesLabels.indexOf(endDate);
+    if (si < 0 || ei < 0 || si > ei) return portfolioSeries;
+    return portfolioSeries.slice(si, ei + 1);
+  }, [portfolioSeries, seriesLabels, startDate, endDate]);
+
   const first = data[0];
   const last  = data[data.length - 1];
   if (!first || !last) return null;
   const chg    = last.v - first.v;
-  const chgPct = (chg / first.v) * 100;
+  const chgPct = first.v > 0 ? (chg / first.v) * 100 : 0;
   const pos    = chg >= 0;
 
   return (
     <div className="card chart-card reveal" style={{ animationDelay: ".04s" }}>
       <div className="card-head">
         <span className="card-title">Portfolio Value Over Time</span>
-        <div className="rsel">
-          {RANGES.map(([lab], i) => (
-            <button
-              key={lab}
-              className={"rseg" + (i === ri ? " active" : "")}
-              onClick={() => setRi(i)}
-            >
-              {lab}
-            </button>
-          ))}
-        </div>
       </div>
+      <RangeBar
+        activePreset={activePreset}
+        showCustom={showCustom}
+        onPreset={selectPreset}
+        onCustomToggle={() => setShowCustom((v) => !v)}
+      />
+      {showCustom && (
+        <div className="date-range-row">
+          <div className="date-field">
+            <label className="date-label ui muted xs">From</label>
+            <input type="month" className="date-inp mono" value={startDate} min={minDate} max={maxDate} onChange={(e) => handleStartChange(e.target.value)} />
+          </div>
+          <span className="date-sep ui muted">—</span>
+          <div className="date-field">
+            <label className="date-label ui muted xs">To</label>
+            <input type="month" className="date-inp mono" value={endDate} min={minDate} max={maxDate} onChange={(e) => handleEndChange(e.target.value)} />
+          </div>
+          <button className="date-reset ui muted" onClick={() => { setStartDate(minDate); setEndDate(maxDate); }}>Reset</button>
+        </div>
+      )}
       <div className="trend-meta">
         <span className="ui muted xs">{first.label} – {last.label}</span>
         <span className="mono xs" style={{ color: pos ? "var(--gain)" : "var(--loss)" }}>
           {fmtSigned(chg)} ({pct(chgPct)})
         </span>
       </div>
-      <AreaTrend key={ri} data={data} color="var(--gold)" height={232} valFmt={(v) => fmtVal(v)} />
+      <AreaTrend key={startDate + endDate} data={data} color="var(--gold)" height={220} valFmt={(v) => fmtVal(v)} />
     </div>
   );
 }
@@ -84,16 +177,28 @@ function PerfBars() {
 }
 
 function FXImpactCard() {
-  const { fxSeries, fxColors, fxLabels } = usePortfolio();
+  const { fxSeries, fxColors, fxLabels, baseCurrency } = usePortfolio();
 
-  // fxLabels is array of "YYYY-MM" strings matching fxSeries indices
   const minDate = fxLabels[0] ?? "2023-01";
   const maxDate = fxLabels[fxLabels.length - 1] ?? "2026-06";
 
-  const [startDate, setStartDate] = useState(minDate);
+  function presetStart(n: number) {
+    return fxLabels[Math.max(0, fxLabels.length - n)] ?? minDate;
+  }
+
+  const [startDate, setStartDate] = useState(() => presetStart(DEFAULT_N));
   const [endDate, setEndDate] = useState(maxDate);
+  const [showCustom, setShowCustom] = useState(false);
 
   const fxKeys = Object.keys(fxColors);
+
+  const activePreset = RANGES.findIndex(([, n]) => startDate === presetStart(n) && endDate === maxDate);
+
+  function selectPreset(n: number) {
+    setStartDate(presetStart(n));
+    setEndDate(maxDate);
+    setShowCustom(false);
+  }
 
   const filteredSeries = useMemo(() => {
     const si = fxLabels.indexOf(startDate);
@@ -114,45 +219,37 @@ function FXImpactCard() {
   return (
     <div className="card chart-card reveal" style={{ animationDelay: ".19s" }}>
       <div className="card-head">
-        <span className="card-title">FX Impact Over Time</span>
-        <span className="ui muted">cumulative, SGD</span>
+        <div>
+          <span className="card-title">FX Impact Over Time</span>
+          <span className="ui muted xs" style={{ display: "block", marginTop: 2 }}>
+            cumulative · {baseCurrency}
+          </span>
+        </div>
       </div>
 
       {fxSeries.length > 0 ? (
         <>
-          <div className="date-range-row">
-            <div className="date-field">
-              <label className="date-label ui muted xs">From</label>
-              <input
-                type="month"
-                className="date-inp mono"
-                value={startDate}
-                min={minDate}
-                max={maxDate}
-                onChange={(e) => handleStartChange(e.target.value)}
-              />
+          <RangeBar
+            activePreset={activePreset}
+            showCustom={showCustom}
+            onPreset={selectPreset}
+            onCustomToggle={() => setShowCustom((v) => !v)}
+          />
+          {showCustom && (
+            <div className="date-range-row">
+              <div className="date-field">
+                <label className="date-label ui muted xs">From</label>
+                <input type="month" className="date-inp mono" value={startDate} min={minDate} max={maxDate} onChange={(e) => handleStartChange(e.target.value)} />
+              </div>
+              <span className="date-sep ui muted">—</span>
+              <div className="date-field">
+                <label className="date-label ui muted xs">To</label>
+                <input type="month" className="date-inp mono" value={endDate} min={minDate} max={maxDate} onChange={(e) => handleEndChange(e.target.value)} />
+              </div>
+              <button className="date-reset ui muted" onClick={() => { setStartDate(minDate); setEndDate(maxDate); }}>Reset</button>
             </div>
-            <span className="date-sep ui muted">—</span>
-            <div className="date-field">
-              <label className="date-label ui muted xs">To</label>
-              <input
-                type="month"
-                className="date-inp mono"
-                value={endDate}
-                min={minDate}
-                max={maxDate}
-                onChange={(e) => handleEndChange(e.target.value)}
-              />
-            </div>
-            <button
-              className="date-reset ui muted"
-              onClick={() => { setStartDate(minDate); setEndDate(maxDate); }}
-              title="Reset to full range"
-            >
-              Reset
-            </button>
-          </div>
-          <FXArea data={filteredSeries} colors={fxColors} keys={fxKeys} height={210} />
+          )}
+          <FXArea key={startDate + endDate} data={filteredSeries} colors={fxColors} keys={fxKeys} height={210} />
           <div className="fx-legend">
             {fxKeys.map((k) => (
               <span key={k}>

@@ -30,7 +30,7 @@ function MoverRow({ m, scale, open, onToggle }: { m: MoverItem; scale: number; o
           <div className="math-row"><span className="ui">FX effect</span><span className="mono" style={{ color: m.fx >= 0 ? "var(--fx-positive)" : "var(--fx-negative)" }}>{m.fx === 0 ? "—" : pct(m.fx)}</span></div>
           <div className="math-row total"><span className="ui">Total return</span><span className="mono" style={{ color: pos ? "var(--gain)" : "var(--loss)" }}>{pct(total)}</span></div>
           <div className="mv-note ui">
-            {m.fx > 0 ? "Currency tailwind added to the asset move." : m.fx < 0 ? "Currency partially offset the asset move." : "SGD-denominated — no FX effect."}
+            {m.fx > 0 ? "Currency tailwind boosted the asset return." : m.fx < 0 ? "Currency headwind partially offset the asset return." : "No FX exposure on this position."}
           </div>
         </div>
       )}

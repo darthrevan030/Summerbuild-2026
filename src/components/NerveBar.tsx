@@ -21,7 +21,9 @@ export function NerveBar({ hero, animate = true, onTweaksToggle }: NerveBarProps
   const [spin, setSpin] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [ccyOpen, setCcyOpen] = useState(false);
+  const [dropPos, setDropPos] = useState<{ top: number; right: number } | null>(null);
   const ccyRef = useRef<HTMLDivElement>(null);
+  const ccyBtnRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
   const dayUp = hero.dayChange >= 0;
 
@@ -35,6 +37,14 @@ export function NerveBar({ hero, animate = true, onTweaksToggle }: NerveBarProps
     document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
   }, [ccyOpen]);
+
+  function handleCcyToggle() {
+    if (!ccyOpen && ccyBtnRef.current) {
+      const r = ccyBtnRef.current.getBoundingClientRect();
+      setDropPos({ top: r.bottom + 6, right: window.innerWidth - r.right });
+    }
+    setCcyOpen((v) => !v);
+  }
 
   async function switchCurrency(c: string) {
     setBaseCurrency(c);
@@ -78,15 +88,19 @@ export function NerveBar({ hero, animate = true, onTweaksToggle }: NerveBarProps
         </div>
         <div className="ccy-switch" ref={ccyRef}>
           <button
+            ref={ccyBtnRef}
             className="nr-ccy mono"
-            onClick={() => setCcyOpen((v) => !v)}
+            onClick={handleCcyToggle}
             title="Switch base currency"
             style={{ cursor: "pointer", userSelect: "none" }}
           >
             {CCY_SYMBOL[baseCurrency] ?? baseCurrency} {baseCurrency} ▾
           </button>
-          {ccyOpen && (
-            <div className="ccy-drop">
+          {ccyOpen && dropPos && (
+            <div
+              className="ccy-drop"
+              style={{ position: "fixed", top: dropPos.top, right: dropPos.right }}
+            >
               {SUPPORTED_CURRENCIES.map((c) => (
                 <button
                   key={c}
