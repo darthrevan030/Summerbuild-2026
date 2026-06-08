@@ -5,12 +5,12 @@ import { usePathname } from "next/navigation";
 import { Icon } from "@/components/Icon";
 
 const TABS = [
-  { label: "Overview", href: "/overview" },
-  { label: "Holdings", href: "/holdings" },
-  { label: "FX Lab", href: "/fx-lab" },
-  { label: "Charts", href: "/charts" },
-  { label: "Analysis", href: "/analysis" },
-  { label: "Add / Import", href: "/add" },
+  { label: "Overview",    href: "/overview",  icon: "layout-dashboard" },
+  { label: "Holdings",    href: "/holdings",  icon: "list"             },
+  { label: "FX Lab",      href: "/fx-lab",    icon: "repeat"           },
+  { label: "Charts",      href: "/charts",    icon: "bar-chart"        },
+  { label: "Analysis",    href: "/analysis",  icon: "sparkles"         },
+  { label: "Add / Import",href: "/add",       icon: "circle-plus"      },
 ];
 
 export function TabBar() {
@@ -18,12 +18,13 @@ export function TabBar() {
 
   return (
     <nav className="tabbar">
-      {TABS.map(({ label, href }) => (
+      {TABS.map(({ label, href, icon }) => (
         <Link
           key={href}
           href={href}
           className={"tab" + (pathname === href ? " active" : "")}
         >
+          <Icon name={icon} size={13} strokeWidth={1.9} />
           {label}
         </Link>
       ))}
@@ -33,7 +34,7 @@ export function TabBar() {
         className={"tab tab-settings" + (pathname === "/settings" ? " active" : "")}
         title="Settings"
       >
-        <Icon name="settings" size={14} style={{ marginRight: 5, verticalAlign: "middle" }} />
+        <Icon name="settings" size={13} strokeWidth={1.9} />
         Settings
       </Link>
     </nav>

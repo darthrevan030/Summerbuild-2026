@@ -101,7 +101,7 @@ function PortfolioTrend() {
             <label className="date-label ui muted xs">To</label>
             <input type="month" className="date-inp mono" value={endDate} min={minDate} max={maxDate} onChange={(e) => handleEndChange(e.target.value)} />
           </div>
-          <button className="date-reset ui muted" onClick={() => { setStartDate(minDate); setEndDate(maxDate); }}>Reset</button>
+          <button className="date-reset ui muted" onClick={() => selectPreset(999)}>Reset</button>
         </div>
       )}
       <div className="trend-meta">
@@ -197,7 +197,7 @@ function FXImpactCard() {
                 <label className="date-label ui muted xs">To</label>
                 <input type="month" className="date-inp mono" value={endDate} min={minDate} max={maxDate} onChange={(e) => handleEndChange(e.target.value)} />
               </div>
-              <button className="date-reset ui muted" onClick={() => { setStartDate(minDate); setEndDate(maxDate); }}>Reset</button>
+              <button className="date-reset ui muted" onClick={() => selectPreset(999)}>Reset</button>
             </div>
           )}
           <FXArea key={startDate + endDate} data={filteredSeries} colors={fxColors} keys={fxKeys} height={210} />

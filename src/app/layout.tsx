@@ -26,6 +26,11 @@ const sora = Sora({
 export const metadata: Metadata = {
   title: "Portfolio — Personal Wealth Terminal",
   description: "Personal finance dashboard and portfolio tracker",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
