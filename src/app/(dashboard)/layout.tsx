@@ -11,9 +11,13 @@ import {
 } from "@/lib/portfolio";
 import { DashboardShell } from "@/components/DashboardShell";
 import { FX_COLORS } from "@/context/portfolio";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const holdings = await fetchHoldings();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const holdings = await fetchHoldings(user?.id);
 
   const hero = computeHeroStats(holdings);
   const assetAllocation = computeAllocationByAsset(holdings);

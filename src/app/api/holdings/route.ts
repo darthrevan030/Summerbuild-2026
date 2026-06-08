@@ -1,12 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchHoldings, insertHolding, deleteHolding } from "@/lib/supabase/data";
+import { createClient } from "@/lib/supabase/server";
+
+async function getAuthUser() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+}
 
 export async function GET() {
-  const holdings = await fetchHoldings();
+  const user = await getAuthUser();
+  const holdings = await fetchHoldings(user?.id);
   return NextResponse.json(holdings);
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getAuthUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await req.json();
   const {
     ticker, name, asset_type, broker, strategy, units, currency,
@@ -19,7 +32,7 @@ export async function POST(req: NextRequest) {
   }
 
   const row = await insertHolding({
-    user_id: "demo",
+    user_id: user.id,
     ticker: String(ticker),
     name: String(name),
     asset_type: String(asset_type),
@@ -46,14 +59,15 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const user = await getAuthUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  // TODO (Step 10): derive userId from supabase.auth.getUser() once auth is wired up.
-  // Hard-coded to "demo" for now — the deleteHolding call scopes by user_id so this
-  // is safe: a caller cannot delete a row belonging to a different user_id value.
-  const userId = "demo";
-  await deleteHolding(id, userId);
+  await deleteHolding(id, user.id);
   return NextResponse.json({ ok: true });
 }

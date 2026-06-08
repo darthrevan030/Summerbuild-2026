@@ -3,21 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { applyAccent } from "@/lib/hexA";
 
-const DARK_ACCENTS = ["#b79cff", "#7c9cff", "#5fd0c6", "#e58ad0"];
-const LIGHT_ACCENTS = ["#6b4bd6", "#2563c9", "#0f8f80", "#b8458f"];
-
 interface TweakState {
   accent: string;
   lightMode: boolean;
-  grain: boolean;
-  motion: boolean;
 }
 
 const DEFAULTS: TweakState = {
   accent: "#b79cff",
   lightMode: false,
-  grain: true,
-  motion: true,
 };
 
 function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
@@ -56,8 +49,6 @@ export function TweaksPanel({ open, onClose }: { open: boolean; onClose: () => v
   };
 
   useEffect(() => { applyAccent(tw.accent); }, [tw.accent]);
-  useEffect(() => { document.body.classList.toggle("no-grain", !tw.grain); }, [tw.grain]);
-  useEffect(() => { document.body.classList.toggle("no-motion", !tw.motion); }, [tw.motion]);
   useEffect(() => {
     document.documentElement.classList.toggle("light", tw.lightMode);
     if (tw.lightMode && tw.accent === "#b79cff") setTweak("accent", "#6b4bd6");
@@ -102,14 +93,12 @@ export function TweaksPanel({ open, onClose }: { open: boolean; onClose: () => v
 
   if (!open) return null;
 
-  const accents = tw.lightMode ? LIGHT_ACCENTS : DARK_ACCENTS;
-
   return (
     <div
       ref={dragRef}
       style={{
         position: "fixed", right: offsetRef.current.x, bottom: offsetRef.current.y,
-        zIndex: 2147483646, width: 280, maxHeight: "calc(100vh - 32px)",
+        zIndex: 2147483646, width: 240, maxHeight: "calc(100vh - 32px)",
         display: "flex", flexDirection: "column",
         background: "rgba(250,249,247,.92)", color: "#29261b",
         backdropFilter: "blur(24px) saturate(160%)", WebkitBackdropFilter: "blur(24px) saturate(160%)",
@@ -130,27 +119,33 @@ export function TweaksPanel({ open, onClose }: { open: boolean; onClose: () => v
         >✕</button>
       </div>
       <div style={{ padding: "2px 14px 14px", display: "flex", flexDirection: "column", gap: 10, overflowY: "auto" }}>
-        <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "rgba(41,38,27,.45)", paddingTop: 0 }}>Appearance</div>
+        <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "rgba(41,38,27,.45)" }}>Appearance</div>
         <Toggle label="Light mode" value={tw.lightMode} onChange={(v) => setTweak("lightMode", v)} />
         <div>
-          <div style={{ fontSize: 12, color: "rgba(41,38,27,.72)", fontWeight: 500, marginBottom: 6 }}>Accent</div>
-          <div style={{ display: "flex", gap: 6 }}>
-            {accents.map((color) => (
-              <button
-                key={color}
-                type="button"
-                onClick={() => setTweak("accent", color)}
+          <div style={{ fontSize: 12, color: "rgba(41,38,27,.72)", fontWeight: 500, marginBottom: 6 }}>Accent colour</div>
+          <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+              background: tw.accent,
+              border: ".5px solid rgba(0,0,0,.18)",
+              boxShadow: "0 2px 6px rgba(0,0,0,.12)",
+              overflow: "hidden", position: "relative",
+            }}>
+              <input
+                type="color"
+                value={tw.accent}
+                onChange={(e) => setTweak("accent", e.target.value)}
                 style={{
-                  flex: 1, height: 28, border: tw.accent === color ? "2px solid rgba(0,0,0,.85)" : ".5px solid rgba(0,0,0,.12)",
-                  borderRadius: 6, background: color, cursor: "default",
-                  boxShadow: tw.accent === color ? "0 2px 6px rgba(0,0,0,.15)" : "none",
+                  position: "absolute", inset: "-4px", width: "calc(100% + 8px)", height: "calc(100% + 8px)",
+                  opacity: 0, cursor: "pointer", border: "none", padding: 0,
                 }}
               />
-            ))}
-          </div>
+            </div>
+            <span style={{ fontFamily: "ui-monospace,monospace", fontSize: 12, color: "rgba(41,38,27,.6)", letterSpacing: ".04em" }}>
+              {tw.accent.toUpperCase()}
+            </span>
+          </label>
         </div>
-        <Toggle label="Film grain" value={tw.grain} onChange={(v) => setTweak("grain", v)} />
-        <Toggle label="Motion" value={tw.motion} onChange={(v) => setTweak("motion", v)} />
       </div>
     </div>
   );
