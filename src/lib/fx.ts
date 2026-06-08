@@ -15,7 +15,3 @@ export function computeAssetGainSGD(h: Holding): number {
 export function computeFxGainSGD(h: Holding): number {
   return h.units * h.buyPrice * (h.currentFxRate - h.buyFxRate);
 }
-
-export function computeTotalGainSGD(h: Holding): number {
-  return computeCurrentValueSGD(h) - computeCostBasisSGD(h);
-}

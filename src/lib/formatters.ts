@@ -4,12 +4,6 @@ const NF = (n: number, d = 0): string =>
     maximumFractionDigits: d,
   });
 
-const sgd = (n: number, d = 0): string => "S$" + NF(n, d);
-
-// U+2212 minus sign, not ASCII hyphen
-const sgdSigned = (n: number, d = 0): string =>
-  (n < 0 ? "−" : "+") + "S$" + NF(n, d);
-
 const pct = (n: number, d = 2): string =>
   (n < 0 ? "−" : "+") + NF(n, d) + "%";
 
@@ -31,6 +25,5 @@ function ccySigned(n: number, ccy: string, d = 0): string {
 }
 
 const SUPPORTED_CURRENCIES = ["SGD", "USD", "EUR", "GBP", "AUD", "JPY", "INR", "HKD"] as const;
-export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
 
-export { NF, sgd, sgdSigned, pct, rate, ccyFmt, ccySigned, CCY_SYMBOL, SUPPORTED_CURRENCIES };
+export { NF, pct, rate, ccyFmt, ccySigned, CCY_SYMBOL, SUPPORTED_CURRENCIES };

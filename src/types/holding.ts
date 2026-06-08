@@ -28,6 +28,7 @@ export interface Holding {
   sparkData: number[];
   createdAt: string;
   updatedAt: string;
+  priceRefreshedAt: string | null;
 }
 
 export interface HoldingRow extends Holding {

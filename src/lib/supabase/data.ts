@@ -46,6 +46,7 @@ interface DbHolding {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  price_refreshed_at: string | null;
 }
 
 function toHoldingRow(db: DbHolding): HoldingRow {
@@ -69,6 +70,7 @@ function toHoldingRow(db: DbHolding): HoldingRow {
     sparkData: Array.isArray(db.spark_data) ? db.spark_data.map(Number) : [],
     createdAt: db.created_at,
     updatedAt: db.updated_at,
+    priceRefreshedAt: db.price_refreshed_at,
   };
 
   const valueSGD = computeCurrentValueSGD(base);
@@ -133,13 +135,19 @@ export async function insertHolding(
 export async function updateHoldingPrice(
   id: string,
   currentPrice: number,
-  currentFxRate: number
+  currentFxRate: number,
+  userId: string
 ): Promise<void> {
   const supabase = await makeServerClient();
   await supabase
     .from("holdings")
-    .update({ current_price: currentPrice, current_fx_rate: currentFxRate })
-    .eq("id", id);
+    .update({
+      current_price: currentPrice,
+      current_fx_rate: currentFxRate,
+      price_refreshed_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("user_id", userId);
 }
 
 export async function deleteHolding(id: string, userId = DEMO_USER): Promise<void> {

@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { usePortfolio } from "@/context/portfolio";
 import { Icon } from "@/components/Icon";
 import { Spark } from "@/components/charts/Spark";
 import { Dumbbell } from "@/components/charts/Dumbbell";
 import { pct, rate, NF } from "@/lib/formatters";
+import { refreshHoldingPrices } from "@/lib/api-client";
 import type { HoldingRow } from "@/types/holding";
 
 const STRAT: Record<string, { label: string; cls: string }> = {
@@ -122,12 +124,26 @@ function DetailCard({ h, onClose }: { h: HoldingRow; onClose: () => void }) {
 
 export default function HoldingsPage() {
   const { holdings, fmtVal, fmtSigned } = usePortfolio();
+  const router = useRouter();
 
   const [q, setQ] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [sort, setSort] = useState<{ k: SortKey; dir: 1 | -1 }>({ k: "totalPct", dir: -1 });
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshMsg, setRefreshMsg] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // TODO: implement handleRefresh
+  // Call refreshHoldingPrices() — it returns { refreshed: N, skipped: M }
+  // Show a loading state while it runs, then a brief success/error message.
+  // After success, call router.refresh() to re-run the server component and
+  // pick up the updated prices from Supabase.
+  // Trade-offs to consider: what message do you show for skipped > 0? What
+  // happens if the call throws (e.g. network error, not logged in)?
+  async function handleRefresh() {
+    // your implementation here (~6 lines)
+  }
 
   // Keyboard shortcut: "/" focuses search
   useEffect(() => {
@@ -223,6 +239,11 @@ export default function HoldingsPage() {
           <Icon name="download" size={15} />
           <span className="ui">CSV</span>
         </button>
+        <button className="icon-btn ghost" onClick={handleRefresh} disabled={refreshing}>
+          <Icon name={refreshing ? "loader" : "refresh-cw"} size={15} style={refreshing ? { animation: "spin 1s linear infinite" } : undefined} />
+          <span className="ui">{refreshing ? "Refreshing…" : "Refresh Prices"}</span>
+        </button>
+        {refreshMsg && <span className="ui muted xs refresh-msg">{refreshMsg}</span>}
       </div>
 
       {/* table */}

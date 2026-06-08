@@ -1,18 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { usePortfolio } from "@/context/portfolio";
 import { Donut } from "@/components/charts/Donut";
 import { Legend } from "@/components/charts/Legend";
 import { AreaTrend } from "@/components/charts/AreaTrend";
 import { FXArea } from "@/components/charts/FXArea";
 import { pct } from "@/lib/formatters";
-
-const RANGES: [string, number][] = [
-  ["1D", 1], ["1W", 2], ["1M", 3], ["3M", 4],
-  ["6M", 7], ["1Y", 13], ["3Y", 37], ["All", 999],
-];
-const DEFAULT_N = 13; // 1Y
+import { useDateRange, RANGES } from "@/lib/useDateRange";
 
 /** Maps portfolioSeries index → "YYYY-MM" (series starts Jan 2023) */
 function seriesIndexToYM(i: number): string {
@@ -64,33 +59,11 @@ function PortfolioTrend() {
     [portfolioSeries.length]
   );
 
-  const minDate = seriesLabels[0] ?? "2023-01";
-  const maxDate = seriesLabels[seriesLabels.length - 1] ?? "2026-06";
-
-  function presetStart(n: number) {
-    return seriesLabels[Math.max(0, seriesLabels.length - n)] ?? minDate;
-  }
-
-  const [startDate, setStartDate] = useState(() => presetStart(DEFAULT_N));
-  const [endDate, setEndDate] = useState(maxDate);
-  const [showCustom, setShowCustom] = useState(false);
-
-  const activePreset = RANGES.findIndex(([, n]) => startDate === presetStart(n) && endDate === maxDate);
-
-  function selectPreset(n: number) {
-    setStartDate(presetStart(n));
-    setEndDate(maxDate);
-    setShowCustom(false);
-  }
-
-  function handleStartChange(v: string) {
-    setStartDate(v);
-    if (v > endDate) setEndDate(v);
-  }
-  function handleEndChange(v: string) {
-    setEndDate(v);
-    if (v < startDate) setStartDate(v);
-  }
+  const {
+    startDate, endDate, minDate, maxDate,
+    activePreset, showCustom,
+    selectPreset, handleStartChange, handleEndChange, toggleCustom,
+  } = useDateRange(seriesLabels);
 
   const data = useMemo(() => {
     const si = seriesLabels.indexOf(startDate);
@@ -115,7 +88,7 @@ function PortfolioTrend() {
         activePreset={activePreset}
         showCustom={showCustom}
         onPreset={selectPreset}
-        onCustomToggle={() => setShowCustom((v) => !v)}
+        onCustomToggle={toggleCustom}
       />
       {showCustom && (
         <div className="date-range-row">
@@ -179,26 +152,13 @@ function PerfBars() {
 function FXImpactCard() {
   const { fxSeries, fxColors, fxLabels, baseCurrency } = usePortfolio();
 
-  const minDate = fxLabels[0] ?? "2023-01";
-  const maxDate = fxLabels[fxLabels.length - 1] ?? "2026-06";
-
-  function presetStart(n: number) {
-    return fxLabels[Math.max(0, fxLabels.length - n)] ?? minDate;
-  }
-
-  const [startDate, setStartDate] = useState(() => presetStart(DEFAULT_N));
-  const [endDate, setEndDate] = useState(maxDate);
-  const [showCustom, setShowCustom] = useState(false);
+  const {
+    startDate, endDate, minDate, maxDate,
+    activePreset, showCustom,
+    selectPreset, handleStartChange, handleEndChange, toggleCustom,
+  } = useDateRange(fxLabels);
 
   const fxKeys = Object.keys(fxColors);
-
-  const activePreset = RANGES.findIndex(([, n]) => startDate === presetStart(n) && endDate === maxDate);
-
-  function selectPreset(n: number) {
-    setStartDate(presetStart(n));
-    setEndDate(maxDate);
-    setShowCustom(false);
-  }
 
   const filteredSeries = useMemo(() => {
     const si = fxLabels.indexOf(startDate);
@@ -206,15 +166,6 @@ function FXImpactCard() {
     if (si === -1 || ei === -1 || si > ei) return fxSeries;
     return fxSeries.slice(si, ei + 1);
   }, [fxSeries, fxLabels, startDate, endDate]);
-
-  function handleStartChange(v: string) {
-    setStartDate(v);
-    if (v > endDate) setEndDate(v);
-  }
-  function handleEndChange(v: string) {
-    setEndDate(v);
-    if (v < startDate) setStartDate(v);
-  }
 
   return (
     <div className="card chart-card reveal" style={{ animationDelay: ".19s" }}>
@@ -233,7 +184,7 @@ function FXImpactCard() {
             activePreset={activePreset}
             showCustom={showCustom}
             onPreset={selectPreset}
-            onCustomToggle={() => setShowCustom((v) => !v)}
+            onCustomToggle={toggleCustom}
           />
           {showCustom && (
             <div className="date-range-row">

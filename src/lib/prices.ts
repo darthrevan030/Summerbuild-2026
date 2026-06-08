@@ -1,0 +1,70 @@
+const CRYPTO_IDS: Record<string, string> = {
+  BTC: "bitcoin", ETH: "ethereum", BNB: "binancecoin",
+  SOL: "solana", XRP: "ripple", ADA: "cardano", DOGE: "dogecoin",
+};
+const GOLD_TICKERS = new Set(["GOLD", "XAU", "GLD"]);
+
+export async function fetchLivePrices(tickers: string[]): Promise<Record<string, number>> {
+  const prices: Record<string, number> = {};
+  if (tickers.length === 0) return prices;
+
+  const crypto   = tickers.filter((t) => CRYPTO_IDS[t]);
+  const gold     = tickers.filter((t) => GOLD_TICKERS.has(t));
+  const equities = tickers.filter((t) => !CRYPTO_IDS[t] && !GOLD_TICKERS.has(t));
+
+  await Promise.all([
+    crypto.length > 0 && (async () => {
+      const ids = crypto.map((t) => CRYPTO_IDS[t]).join(",");
+      const res = await fetch(
+        `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`
+      );
+      if (res.ok) {
+        const json = await res.json();
+        for (const t of crypto) {
+          const p = json[CRYPTO_IDS[t]]?.usd;
+          if (p) prices[t] = p;
+        }
+      }
+    })(),
+
+    gold.length > 0 && process.env.GOLDAPI_KEY && (async () => {
+      const res = await fetch("https://www.goldapi.io/api/XAU/USD", {
+        headers: { "x-access-token": process.env.GOLDAPI_KEY! },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.price) for (const t of gold) prices[t] = json.price;
+      }
+    })(),
+
+    equities.length > 0 && process.env.EODHD_API_KEY && (async () => {
+      await Promise.all(
+        equities.map(async (ticker) => {
+          const res = await fetch(
+            `https://eodhd.com/api/real-time/${ticker}.US?api_token=${process.env.EODHD_API_KEY}&fmt=json`
+          );
+          if (res.ok) {
+            const json = await res.json();
+            if (json.close) prices[ticker] = json.close;
+          }
+        })
+      );
+    })(),
+  ]);
+
+  return prices;
+}
+
+/** Frankfurter.app — free, no key, SGD-based rates. Returns {} on failure. */
+export async function fetchLiveFxRates(): Promise<Record<string, number>> {
+  try {
+    const res = await fetch("https://api.frankfurter.app/latest?base=SGD", {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return {};
+    const json = await res.json();
+    return json.rates as Record<string, number>;
+  } catch {
+    return {};
+  }
+}

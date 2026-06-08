@@ -29,6 +29,12 @@ export async function fetchQuote(
   return res.json();
 }
 
+export async function refreshHoldingPrices(): Promise<{ refreshed: number; skipped: number }> {
+  const res = await fetch("/api/holdings/refresh", { method: "POST" });
+  if (!res.ok) throw new Error(`refreshHoldingPrices failed: ${res.status}`);
+  return res.json();
+}
+
 export async function streamAnalysis(
   prompt: string,
   onChunk: (text: string) => void,

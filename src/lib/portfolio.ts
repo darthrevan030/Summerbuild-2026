@@ -19,7 +19,7 @@ const PAL = ["#b79cff", "#5fd0c6", "#6fb0ff", "#f4a6cf", "#8b8bff", "#f0bd8a"];
 
 const FX_COLOR_PALETTE = ["#6fb0ff", "#46d8a0", "#f0bd8a", "#b79cff", "#f4a6cf", "#8b8bff"];
 
-export const FALLBACK_FX_RATES: Record<string, number> = {
+const FALLBACK_FX_RATES: Record<string, number> = {
   SGD: 1, USD: 1.36, EUR: 1.51, GBP: 1.72,
   AUD: 0.88, JPY: 0.0091, INR: 0.016, HKD: 0.174,
 };
