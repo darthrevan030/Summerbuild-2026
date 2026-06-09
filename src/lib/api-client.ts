@@ -49,15 +49,19 @@ export async function streamAnalysis(
   if (!res.ok) throw new Error(`streamAnalysis failed: ${res.status}`);
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();
-  while (true) {
+  let errored = false;
+  outer: while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     const chunk = decoder.decode(value, { stream: true });
     for (const line of chunk.split("\n")) {
       if (line.startsWith("data: ")) {
         const text = line.slice(6);
-        if (text !== "[DONE]") onChunk(text);
+        if (text === "[DONE]") break outer;
+        if (text === "[ERROR]") { errored = true; break outer; }
+        onChunk(text);
       }
     }
   }
+  if (errored) throw new Error("Analysis engine error — check ANTHROPIC_API_KEY");
 }

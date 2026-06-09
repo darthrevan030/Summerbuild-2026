@@ -7,6 +7,7 @@ import { TabBar } from "@/components/TabBar";
 import { SummaryRail } from "@/components/SummaryRail";
 import { TweaksPanel } from "@/components/TweaksPanel";
 import { PortfolioProvider } from "@/context/portfolio";
+import { ToastProvider } from "@/components/Toast";
 import type { HoldingRow } from "@/types/holding";
 import type {
   HeroStats,
@@ -45,6 +46,7 @@ export function DashboardShell({
   children,
 }: DashboardShellProps) {
   const [tweaksOpen, setTweaksOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const pathname = usePathname();
   const showSidebar = !["/overview", "/settings", "/admin"].includes(pathname);
 
@@ -55,17 +57,24 @@ export function DashboardShell({
       portfolioSeries, fxSeries, fxLabels, fxColors, baseFxRates,
       initialDisplayName, initialBaseCurrency, initialRole,
     }}>
-      <div className="app">
-        <NerveBar hero={hero} animate onTweaksToggle={() => setTweaksOpen((o) => !o)} />
-        <TabBar />
-        <div className="body">
-          {showSidebar && <SummaryRail />}
-          <main className={"content" + (showSidebar ? "" : " nosb")} key={pathname}>
-            {children}
-          </main>
+      <ToastProvider>
+        <div className="app">
+          <NerveBar
+            hero={hero}
+            animate
+            onTweaksToggle={() => setTweaksOpen((o) => !o)}
+            onHamburger={() => setMobileNavOpen(true)}
+          />
+          <TabBar mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} />
+          <div className="body">
+            {showSidebar && <SummaryRail />}
+            <main className={"content" + (showSidebar ? "" : " nosb")} key={pathname}>
+              {children}
+            </main>
+          </div>
+          <TweaksPanel open={tweaksOpen} onClose={() => setTweaksOpen(false)} />
         </div>
-        <TweaksPanel open={tweaksOpen} onClose={() => setTweaksOpen(false)} />
-      </div>
+      </ToastProvider>
     </PortfolioProvider>
   );
 }

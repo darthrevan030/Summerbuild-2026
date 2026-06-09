@@ -31,6 +31,8 @@ const PATHS: Record<string, React.ReactNode> = {
   // trend indicators
   up:         <><path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/></>,
   down:       <><path d="m22 17-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/></>,
+  // mobile nav
+  menu:       <><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></>,
 };
 
 interface IconProps {

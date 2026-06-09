@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { Select } from "@/components/Select";
 import { fetchFx } from "@/lib/api-client";
+import { useToast } from "@/components/Toast";
 
 const ASSET_TYPES = ["Equity", "ETF", "REIT", "Gold", "RE"];
 const STRATEGIES  = ["long_term", "active", "speculative", "physical"];
@@ -35,7 +36,7 @@ const STRAT_LABEL: Record<string, string> = {
 };
 
 const CCY_FLAGS: Record<string, string> = {
-  SGD: "🇸🇬", USD: "🇺🇸", EUR: "🇪🇺", AUD: "🇦🇺", GBP: "🇬🇧", INR: "🇮🇳",
+  SGD: "🇸🇬", USD: "🇺🇸", EUR: "🇪🇺", AUD: "🇦🇺", GBP: "🇬🇧", INR: "🇮🇳", JPY: "🇯🇵", HKD: "🇭🇰",
 };
 
 const TYPE_ICON: Record<string, string> = {
@@ -78,19 +79,23 @@ function parseCsv(text: string): { headers: string[]; rows: CsvRow[] } {
   return { headers, rows };
 }
 
+const TODAY = new Date().toISOString().slice(0, 10);
+
+const EMPTY_FORM = {
+  name: "", ticker: "", exchange: "US", asset_type: "Equity", strategy: "long_term",
+  broker: "", units: "", currency: "USD", buy_price: "",
+  buy_date: TODAY,
+  buy_fx_rate: "", notes: "",
+};
+
 // ---- manual entry form ----
 function ManualForm() {
   const router = useRouter();
-  const [form, setForm] = useState({
-    name: "", ticker: "", exchange: "US", asset_type: "Equity", strategy: "long_term",
-    broker: "", units: "", currency: "USD", buy_price: "",
-    buy_date: new Date().toISOString().slice(0, 10),
-    buy_fx_rate: "", notes: "",
-  });
+  const { toast } = useToast();
+  const [form, setForm] = useState(EMPTY_FORM);
   const [fetchingFx, setFetchingFx] = useState(false);
   const [fxAuto, setFxAuto]         = useState(false);
   const [saving, setSaving]         = useState(false);
-  const [success, setSuccess]       = useState(false);
   const [error, setError]           = useState("");
   const fxDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -135,28 +140,38 @@ function ManualForm() {
   const handleSubmit = async () => {
     setError(""); setSaving(true);
     try {
+      const units     = parseFloat(form.units);
+      const buy_price = parseFloat(form.buy_price);
+
+      if (!form.name.trim())           throw new Error("Asset name is required");
+      if (isNaN(units) || units <= 0)  throw new Error("Units must be a positive number");
+      if (isNaN(buy_price) || buy_price <= 0) throw new Error("Purchase price must be a positive number");
+      if (!form.buy_date)              throw new Error("Purchase date is required");
+      if (form.buy_date > TODAY)       throw new Error("Purchase date cannot be in the future");
+
       // Append exchange suffix so EODHD/Finnhub know which market to query
       const baseTicker = form.ticker.toUpperCase() || "—";
       const tickerWithExchange = baseTicker !== "—" && form.exchange
         ? `${baseTicker}.${form.exchange}`
         : baseTicker;
 
+      const fxRate = parseFloat(form.buy_fx_rate || "1") || 1;
       const payload = {
         ticker:          tickerWithExchange,
-        name:            form.name,
+        name:            form.name.trim(),
         asset_type:      form.asset_type,
         broker:          form.broker,
         strategy:        form.strategy,
-        units:           parseFloat(form.units),
+        units,
         currency:        form.currency,
         flag:            CCY_FLAGS[form.currency] ?? "🌐",
         icon:            TYPE_ICON[form.asset_type] ?? "briefcase",
-        buy_price:       parseFloat(form.buy_price),
+        buy_price,
         buy_date:        form.buy_date,
-        buy_fx_rate:     parseFloat(form.buy_fx_rate || "1"),
-        current_price:   parseFloat(form.buy_price),
-        current_fx_rate: parseFloat(form.buy_fx_rate || "1"),
-        spark_data:      [parseFloat(form.buy_price)],
+        buy_fx_rate:     fxRate,
+        current_price:   buy_price,
+        current_fx_rate: fxRate,
+        spark_data:      [buy_price],
         notes:           form.notes || null,
       };
       const res = await fetch("/api/holdings", {
@@ -165,11 +180,14 @@ function ManualForm() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Save failed"); }
-      setSuccess(true);
+      toast(`${form.name.trim()} added to portfolio`);
+      setForm(EMPTY_FORM);
+      setFxAuto(false);
       router.refresh();
-      setTimeout(() => setSuccess(false), 3000);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Save failed");
+      const msg = e instanceof Error ? e.message : "Save failed";
+      setError(msg);
+      toast(msg, "error");
     } finally {
       setSaving(false);
     }
@@ -223,16 +241,16 @@ function ManualForm() {
           <input className="inp" placeholder="Tiger" value={form.broker} onChange={(e) => set("broker", e.target.value)} />
         </Field>
         <Field label="Units">
-          <input className="inp" type="number" placeholder="100" value={form.units} onChange={(e) => set("units", e.target.value)} />
+          <input className="inp" type="number" placeholder="100" min="0" step="any" value={form.units} onChange={(e) => set("units", e.target.value)} />
         </Field>
         <Field label="Currency">
           <Select value={CCY_FLAGS[form.currency] + " " + form.currency} options={CURRENCIES.map((c) => CCY_FLAGS[c] + " " + c)} onChange={(v) => set("currency", v.split(" ")[1])} />
         </Field>
         <Field label="Purchase Price">
-          <input className="inp" type="number" placeholder="412.50" value={form.buy_price} onChange={(e) => set("buy_price", e.target.value)} />
+          <input className="inp" type="number" placeholder="412.50" min="0" step="any" value={form.buy_price} onChange={(e) => set("buy_price", e.target.value)} />
         </Field>
         <Field label="Purchase Date">
-          <input className="inp" type="date" value={form.buy_date} onChange={(e) => set("buy_date", e.target.value)} />
+          <input className="inp" type="date" value={form.buy_date} max={TODAY} onChange={(e) => set("buy_date", e.target.value)} />
         </Field>
         <Field label="Purchase FX Rate" full>
           <div className="fx-fetch">
@@ -263,10 +281,9 @@ function ManualForm() {
           <input className="inp" placeholder="optional" value={form.notes} onChange={(e) => set("notes", e.target.value)} />
         </Field>
 
-        {error && <div className="ui" style={{ color: "var(--loss)", gridColumn: "1 / -1" }}>{error}</div>}
-        {success && <div className="ui" style={{ color: "var(--gain)", gridColumn: "1 / -1" }}>Holding added successfully!</div>}
+        {error && <div className="ui" style={{ color: "var(--loss)", gridColumn: "1 / -1", fontSize: 12 }}>{error}</div>}
 
-        <button className="btn-gold" onClick={handleSubmit} disabled={saving || !form.name || !form.buy_price}>
+        <button className="btn-gold" onClick={handleSubmit} disabled={saving || !form.name.trim() || !form.buy_price}>
           <Icon name="plus" size={16} />
           {saving ? "Saving…" : "Add Holding"}
         </button>

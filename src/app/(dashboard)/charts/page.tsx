@@ -59,10 +59,12 @@ function PortfolioTrend() {
   } = useDateRange(seriesLabels);
 
   const data = useMemo(() => {
-    const si = seriesLabels.indexOf(startDate);
-    const ei = seriesLabels.indexOf(endDate);
-    if (si < 0 || ei < 0 || si > ei) return portfolioSeries;
-    return portfolioSeries.slice(si, ei + 1);
+    // Use nearest available index: find first label >= startDate and last label <= endDate
+    const si = seriesLabels.findIndex((l) => l >= startDate);
+    const ei = [...seriesLabels].reverse().findIndex((l) => l <= endDate);
+    const eiActual = ei < 0 ? -1 : seriesLabels.length - 1 - ei;
+    if (si < 0 || eiActual < 0 || si > eiActual) return portfolioSeries;
+    return portfolioSeries.slice(si, eiActual + 1);
   }, [portfolioSeries, seriesLabels, startDate, endDate]);
 
   const first = data[0];
@@ -94,12 +96,12 @@ function PortfolioTrend() {
         <div className="date-range-row">
           <div className="date-field">
             <label className="date-label ui muted xs">From</label>
-            <input type="month" className="date-inp mono" value={startDate} min={minDate} max={maxDate} onChange={(e) => handleStartChange(e.target.value)} />
+            <input type="month" className="date-inp mono" value={startDate} onChange={(e) => handleStartChange(e.target.value)} />
           </div>
           <span className="date-sep ui muted">—</span>
           <div className="date-field">
             <label className="date-label ui muted xs">To</label>
-            <input type="month" className="date-inp mono" value={endDate} min={minDate} max={maxDate} onChange={(e) => handleEndChange(e.target.value)} />
+            <input type="month" className="date-inp mono" value={endDate} onChange={(e) => handleEndChange(e.target.value)} />
           </div>
           <button className="date-reset ui muted" onClick={() => selectPreset(999)}>Reset</button>
         </div>
@@ -161,9 +163,10 @@ function FXImpactCard() {
   const fxKeys = Object.keys(fxColors);
 
   const { filteredSeries, filteredLabels } = useMemo(() => {
-    const si = fxLabels.indexOf(startDate);
-    const ei = fxLabels.indexOf(endDate);
-    if (si === -1 || ei === -1 || si > ei) return { filteredSeries: fxSeries, filteredLabels: fxLabels };
+    const si = fxLabels.findIndex((l) => l >= startDate);
+    const eiRev = [...fxLabels].reverse().findIndex((l) => l <= endDate);
+    const ei = eiRev < 0 ? -1 : fxLabels.length - 1 - eiRev;
+    if (si < 0 || ei < 0 || si > ei) return { filteredSeries: fxSeries, filteredLabels: fxLabels };
     return { filteredSeries: fxSeries.slice(si, ei + 1), filteredLabels: fxLabels.slice(si, ei + 1) };
   }, [fxSeries, fxLabels, startDate, endDate]);
 
@@ -190,12 +193,12 @@ function FXImpactCard() {
             <div className="date-range-row">
               <div className="date-field">
                 <label className="date-label ui muted xs">From</label>
-                <input type="month" className="date-inp mono" value={startDate} min={minDate} max={maxDate} onChange={(e) => handleStartChange(e.target.value)} />
+                <input type="month" className="date-inp mono" value={startDate} onChange={(e) => handleStartChange(e.target.value)} />
               </div>
               <span className="date-sep ui muted">—</span>
               <div className="date-field">
                 <label className="date-label ui muted xs">To</label>
-                <input type="month" className="date-inp mono" value={endDate} min={minDate} max={maxDate} onChange={(e) => handleEndChange(e.target.value)} />
+                <input type="month" className="date-inp mono" value={endDate} onChange={(e) => handleEndChange(e.target.value)} />
               </div>
               <button className="date-reset ui muted" onClick={() => selectPreset(999)}>Reset</button>
             </div>

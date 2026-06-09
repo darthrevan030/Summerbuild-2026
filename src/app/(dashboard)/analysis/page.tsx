@@ -368,7 +368,7 @@ let SENT_CACHE: AnalysisData | null = null;
 function buildFallback(holdings: HoldingRow[]): AnalysisData {
   const items = holdings.map((h, i) => {
     const id  = h.ticker !== "—" ? h.ticker : (h.assetType + "_" + i);
-    const fb  = FALLBACK_ITEMS[id] ?? { score: 0, summary: `${h.name} — no analysis available.`, drivers: [] };
+    const fb  = FALLBACK_ITEMS[id] ?? { score: 0, summary: `${h.name} — no live analysis yet.`, drivers: [] };
     return { id, name: h.name, icon: h.icon, assetType: h.assetType, ticker: id, sparkData: h.sparkData, ...fb };
   });
   return { items, overall: FALLBACK_OVERALL, source: "sample" };
@@ -412,15 +412,16 @@ async function runSentimentAI(holdings: HoldingRow[]): Promise<AnalysisData> {
 
 export default function AnalysisPage() {
   const { holdings } = usePortfolio();
-  const [data, setData]       = useState<AnalysisData | null>(SENT_CACHE);
-  const [loading, setLoading] = useState(!SENT_CACHE);
+  // Show fallback data immediately — AI runs in background and upgrades the state
+  const [data, setData]       = useState<AnalysisData>(() => SENT_CACHE ?? buildFallback(holdings));
+  const [aiRunning, setAiRunning] = useState(!SENT_CACHE);
 
   const run = async () => {
-    setLoading(true);
+    setAiRunning(true);
     let res: AnalysisData;
     try { res = await runSentimentAI(holdings); }
-    catch { res = buildFallback(holdings); }
-    SENT_CACHE = res; setData(res); setLoading(false);
+    catch { res = { ...buildFallback(holdings), source: "sample" }; }
+    SENT_CACHE = res; setData(res); setAiRunning(false);
   };
 
   useEffect(() => {
@@ -429,15 +430,15 @@ export default function AnalysisPage() {
     (async () => {
       let res: AnalysisData;
       try { res = await runSentimentAI(holdings); }
-      catch { res = buildFallback(holdings); }
-      if (live) { SENT_CACHE = res; setData(res); setLoading(false); }
+      catch { res = { ...buildFallback(holdings), source: "sample" }; }
+      if (live) { SENT_CACHE = res; setData(res); setAiRunning(false); }
     })();
     return () => { live = false; };
-  }, [holdings]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const left  = data?.items.filter((_, i) => i % 2 === 0) ?? [];
-  const right = data?.items.filter((_, i) => i % 2 === 1) ?? [];
-  const skel  = holdings.filter((_, i) => i < 4);
+  const left  = data.items.filter((_, i) => i % 2 === 0);
+  const right = data.items.filter((_, i) => i % 2 === 1);
 
   return (
     <div className="tab-body">
@@ -449,61 +450,35 @@ export default function AnalysisPage() {
         </div>
         <div className="an-actions">
           <span className="an-ai-chip">
-            <i />
-            {loading ? "Analysing…" : data?.source === "ai" ? "Updated just now" : "Sample data"}
+            <i className={aiRunning ? "pulse" : ""} />
+            {aiRunning ? "Analysing…" : data.source === "ai" ? "Updated just now" : "Sample data"}
           </span>
           <button
             className="btn-gold"
             style={{ margin: 0, padding: "11px 18px", gridColumn: "auto" }}
-            disabled={loading}
+            disabled={aiRunning}
             onClick={run}
           >
-            <Icon name="refresh" size={15} />{loading ? "Running" : "Re-run"}
+            <Icon name="refresh" size={15} />{aiRunning ? "Running…" : "Re-run"}
           </button>
         </div>
       </div>
 
-      {loading ? (
-        <>
-          <div className="card an-hero">
-            <div className="anh-left">
-              <div className="sk" style={{ width: 120, height: 12, marginBottom: 8 }} />
-              <div className="sk" style={{ width: 160, height: 38, marginBottom: 8 }} />
-              <div className="sk" style={{ width: 200, height: 12 }} />
-            </div>
-            <div className="anh-right">
-              <div className="sk" style={{ height: 12, borderRadius: 8 }} />
-              <div className="sk" style={{ height: 36, marginTop: 6 }} />
-            </div>
-          </div>
-          <div className="sent-grid">
-            <div className="sent-col">
-              {skel.filter((_, i) => i % 2 === 0).map((h, i) => <SkelCard key={h.id} delay={i * 0.05} />)}
-            </div>
-            <div className="sent-col">
-              {skel.filter((_, i) => i % 2 === 1).map((h, i) => <SkelCard key={h.id} delay={i * 0.05 + 0.04} />)}
-            </div>
-          </div>
-        </>
-      ) : data && (
-        <>
-          <Hero overall={data.overall} items={data.items} />
-          <AskBox holdings={holdings} />
-          <div className="sent-grid">
-            <div className="sent-col">
-              {left.map((it, i) => <SentCard key={it.id} it={it} delay={0.05 + i * 0.08} />)}
-            </div>
-            <div className="sent-col">
-              {right.map((it, i) => <SentCard key={it.id} it={it} delay={0.09 + i * 0.08} />)}
-            </div>
-          </div>
-          {data.source === "sample" && (
-            <div className="an-note">
-              <Icon name="file" size={13} />
-              Showing curated sample data — set a real <code>ANTHROPIC_API_KEY</code> for a live read.
-            </div>
-          )}
-        </>
+      <Hero overall={data.overall} items={data.items} />
+      <AskBox holdings={holdings} />
+      <div className="sent-grid">
+        <div className="sent-col">
+          {left.map((it, i) => <SentCard key={it.id} it={it} delay={0.05 + i * 0.08} />)}
+        </div>
+        <div className="sent-col">
+          {right.map((it, i) => <SentCard key={it.id} it={it} delay={0.09 + i * 0.08} />)}
+        </div>
+      </div>
+      {data.source === "sample" && !aiRunning && (
+        <div className="an-note">
+          <Icon name="file" size={13} />
+          Showing curated sample data — set a real <code>ANTHROPIC_API_KEY</code> for a live read.
+        </div>
       )}
     </div>
   );

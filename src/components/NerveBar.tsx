@@ -15,9 +15,10 @@ interface NerveBarProps {
   hero: HeroStats;
   animate?: boolean;
   onTweaksToggle?: () => void;
+  onHamburger?: () => void;
 }
 
-export function NerveBar({ hero, animate = true, onTweaksToggle }: NerveBarProps) {
+export function NerveBar({ hero, animate = true, onTweaksToggle, onHamburger }: NerveBarProps) {
   const { displayName, fmtVal, fmtSigned, baseCurrency, setBaseCurrency } = usePortfolio();
   const currencies = useCurrencies();
   const total = useCountUp(hero.total, 1300, animate);
@@ -118,36 +119,45 @@ export function NerveBar({ hero, animate = true, onTweaksToggle }: NerveBarProps
           )}
         </div>
         <div className="nr-time mono">{hero.updated}</div>
-        <button
-          className={"refresh" + (spin ? " spin" : "")}
-          onClick={async () => {
-            setSpin(true);
-            try {
-              await refreshHoldingPrices();
-              router.refresh();
-            } finally {
-              setSpin(false);
-            }
-          }}
-          title="Refresh prices"
-          disabled={spin}
-        >
-          <Icon name="refresh" size={16} />
-        </button>
-        {onTweaksToggle && (
-          <button className="refresh" onClick={onTweaksToggle} title="Tweaks">
-            <Icon name="sliders" size={15} />
+        {/* Desktop-only action buttons */}
+        <div className="nr-actions">
+          <button
+            className={"refresh" + (spin ? " spin" : "")}
+            onClick={async () => {
+              setSpin(true);
+              try {
+                await refreshHoldingPrices();
+                router.refresh();
+              } finally {
+                setSpin(false);
+              }
+            }}
+            title="Refresh prices"
+            disabled={spin}
+          >
+            <Icon name="refresh" size={16} />
+          </button>
+          {onTweaksToggle && (
+            <button className="refresh" onClick={onTweaksToggle} title="Tweaks">
+              <Icon name="sliders" size={15} />
+            </button>
+          )}
+          <button
+            className="refresh"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            title="Log out"
+            style={{ opacity: loggingOut ? 0.5 : 1 }}
+          >
+            <Icon name="logout" size={15} />
+          </button>
+        </div>
+        {/* Mobile-only hamburger */}
+        {onHamburger && (
+          <button className="hamburger-btn refresh" onClick={onHamburger} title="Menu">
+            <Icon name="menu" size={18} />
           </button>
         )}
-        <button
-          className="refresh"
-          onClick={handleLogout}
-          disabled={loggingOut}
-          title="Log out"
-          style={{ opacity: loggingOut ? 0.5 : 1 }}
-        >
-          <Icon name="logout" size={15} />
-        </button>
       </div>
     </header>
   );

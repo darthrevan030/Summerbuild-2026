@@ -37,7 +37,7 @@ export function Select({ value, options, onChange }: SelectProps) {
         className={"cselect-trigger" + (open ? " open" : "")}
         onClick={() => (open ? setOpen(false) : openDrop())}
       >
-        <span className="ui">{value}</span>
+        <span className="cselect-val">{value}</span>
         <Icon
           name="chevron"
           size={14}

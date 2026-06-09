@@ -10,7 +10,6 @@ import type {
   FxSeriesPoint,
 } from "@/types/portfolio";
 import {
-  computeCurrentValueSGD,
   computeCostBasisSGD,
   computeAssetGainSGD,
   computeFxGainSGD,
@@ -95,6 +94,14 @@ export function computeAllocationByGeo(holdings: HoldingRow[]): AllocationSlice[
     JPY: "Japan",
     CNY: "China",
     CNH: "China",
+    KRW: "South Korea",
+    TWD: "Taiwan",
+    SAR: "Saudi Arabia",
+    BRL: "Brazil",
+    CHF: "Switzerland",
+    SEK: "Sweden",
+    NOK: "Norway",
+    DKK: "Denmark",
   };
   const totals: Record<string, number> = {};
   const grandTotal = holdings.reduce((s, h) => s + h.valueSGD, 0);
