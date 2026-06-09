@@ -6,10 +6,10 @@ import { Icon } from "@/components/Icon";
 import { Select } from "@/components/Select";
 import { fetchFx } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
+import { useCurrencies } from "@/hooks/useCurrencies";
 
 const ASSET_TYPES = ["Equity", "ETF", "REIT", "Gold", "RE"];
 const STRATEGIES  = ["long_term", "active", "speculative", "physical"];
-const CURRENCIES  = ["SGD", "USD", "EUR", "AUD", "GBP", "INR", "JPY", "HKD"];
 
 // EODHD exchange codes with human labels, grouped by region
 const EXCHANGES: { code: string; label: string }[] = [
@@ -92,6 +92,7 @@ const EMPTY_FORM = {
 function ManualForm() {
   const router = useRouter();
   const { toast } = useToast();
+  const currencies = useCurrencies();
   const [form, setForm] = useState(EMPTY_FORM);
   const [fetchingFx, setFetchingFx] = useState(false);
   const [fxAuto, setFxAuto]         = useState(false);
@@ -244,7 +245,7 @@ function ManualForm() {
           <input className="inp" type="number" placeholder="100" min="0" step="any" value={form.units} onChange={(e) => set("units", e.target.value)} />
         </Field>
         <Field label="Currency">
-          <Select value={CCY_FLAGS[form.currency] + " " + form.currency} options={CURRENCIES.map((c) => CCY_FLAGS[c] + " " + c)} onChange={(v) => set("currency", v.split(" ")[1])} />
+          <Select value={CCY_FLAGS[form.currency] + " " + form.currency} options={currencies.map((c) => (CCY_FLAGS[c] ?? "🌐") + " " + c)} onChange={(v) => set("currency", v.split(" ")[1])} />
         </Field>
         <Field label="Purchase Price">
           <input className="inp" type="number" placeholder="412.50" min="0" step="any" value={form.buy_price} onChange={(e) => set("buy_price", e.target.value)} />
