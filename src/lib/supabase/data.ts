@@ -203,7 +203,8 @@ export async function fetchSnapshots(userId: string): Promise<SnapshotRow[]> {
     .from("portfolio_snapshots")
     .select("recorded_date, value_sgd, cost_sgd, fx_impact_sgd, fx_by_currency")
     .eq("user_id", userId)
-    .order("recorded_date", { ascending: true });
+    .order("recorded_date", { ascending: true })
+    .limit(10000);
   return (data ?? []).map((r) => ({
     recordedDate: r.recorded_date as string,
     valueSgd: Number(r.value_sgd),

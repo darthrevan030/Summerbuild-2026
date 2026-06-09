@@ -181,13 +181,13 @@ function ymLabel(ym: string): string {
   return `${MON[mo]} ${String(yr).slice(2)}`;
 }
 
-/** Label for a daily "YYYY-MM-DD" date. Shows "Jun 3" for current year, "Jul 23" for past years. */
+/** Label for a daily "YYYY-MM-DD" date. Shows "Jun 3" for current year, "Jun 3 '25" for past years. */
 function dateLabel(date: string): string {
   const yr = parseInt(date.slice(0, 4));
   const mo = parseInt(date.slice(5, 7)) - 1;
   const dy = parseInt(date.slice(8, 10));
   const thisYear = new Date().getFullYear();
-  return yr === thisYear ? `${MON[mo]} ${dy}` : `${MON[mo]} ${String(yr).slice(2)}`;
+  return yr === thisYear ? `${MON[mo]} ${dy}` : `${MON[mo]} ${dy} '${String(yr).slice(2)}`;
 }
 
 /** Builds portfolio value series with one point per daily snapshot (for 1D/1W chart granularity). */
