@@ -7,27 +7,10 @@ import { Select } from "@/components/Select";
 import { fetchFx } from "@/lib/api-client";
 import { useToast } from "@/components/Toast";
 import { useCurrencies } from "@/hooks/useCurrencies";
+import { useExchanges } from "@/hooks/useExchanges";
 
 const ASSET_TYPES = ["Equity", "ETF", "REIT", "Gold", "RE"];
 const STRATEGIES  = ["long_term", "active", "speculative", "physical"];
-
-// EODHD exchange codes with human labels, grouped by region
-const EXCHANGES: { code: string; label: string }[] = [
-  { code: "",     label: "— No exchange (physical / unlisted)" },
-  { code: "US",   label: "US · NYSE / NASDAQ" },
-  { code: "LSE",  label: "LSE · London Stock Exchange" },
-  { code: "TSE",  label: "TSE · Tokyo Stock Exchange" },
-  { code: "HKEX", label: "HKEX · Hong Kong Exchange" },
-  { code: "NSE",  label: "NSE · National Stock Exchange India" },
-  { code: "BSE",  label: "BSE · Bombay Stock Exchange" },
-  { code: "SG",   label: "SGX · Singapore Exchange" },
-  { code: "ASX",  label: "ASX · Australian Securities Exchange" },
-  { code: "XETRA",label: "XETRA · Deutsche Börse (Germany)" },
-  { code: "PA",   label: "Euronext Paris" },
-  { code: "MI",   label: "Borsa Italiana (Milan)" },
-  { code: "SHG",  label: "SSE · Shanghai Stock Exchange" },
-  { code: "SHE",  label: "SZSE · Shenzhen Stock Exchange" },
-];
 
 const PHYSICAL_TYPES = new Set(["Gold", "RE"]);
 
@@ -93,6 +76,7 @@ function ManualForm() {
   const router = useRouter();
   const { toast } = useToast();
   const currencies = useCurrencies();
+  const exchanges  = useExchanges();
   const [form, setForm] = useState(EMPTY_FORM);
   const [fetchingFx, setFetchingFx] = useState(false);
   const [fxAuto, setFxAuto]         = useState(false);
@@ -210,9 +194,9 @@ function ManualForm() {
         {!PHYSICAL_TYPES.has(form.asset_type) && (
           <Field label="Exchange">
             <Select
-              value={EXCHANGES.find((ex) => ex.code === form.exchange)?.label ?? "— No exchange (physical / unlisted)"}
-              options={EXCHANGES.map((ex) => ex.label)}
-              onChange={(label) => set("exchange", EXCHANGES.find((ex) => ex.label === label)?.code ?? "")}
+              value={exchanges.find((ex) => ex.code === form.exchange)?.label ?? "— No exchange (physical / unlisted)"}
+              options={exchanges.map((ex) => ex.label)}
+              onChange={(label) => set("exchange", exchanges.find((ex) => ex.label === label)?.code ?? "")}
             />
           </Field>
         )}

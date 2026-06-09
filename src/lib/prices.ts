@@ -9,14 +9,23 @@ const GOLD_TICKERS = new Set(["GOLD", "XAU", "GLD"]);
 const EODHD_EXCHANGE: Record<string, string> = {
   USD: "US",
   GBP: "LSE",
-  EUR: "XETRA",   // Deutsche Börse — most liquid European exchange
+  EUR: "XETRA",
   JPY: "TSE",
   INR: "NSE",
-  HKD: "HKEX",
-  SGD: "SG",
-  AUD: "ASX",
-  CNY: "SHG",     // Shanghai
+  HKD: "HK",   // EODHD uses HK, not HKEX
+  SGD: "SI",   // EODHD uses SI, not SG
+  AUD: "AU",   // EODHD uses AU, not ASX
+  CNY: "SHG",
   CNH: "SHG",
+};
+
+// Remap old/incorrect app exchange codes → correct EODHD codes
+// Handles DB entries written before codes were corrected
+const EODHD_CODE_REMAP: Record<string, string> = {
+  SG:   "SI",   // SGX Singapore (old app code → EODHD)
+  HKEX: "HK",  // Hong Kong Exchange
+  ASX:  "AU",  // Australian Securities Exchange
+  MI:   "MI",  // Borsa Italiana — keep as-is, EODHD may support
 };
 
 // Finnhub uses "EXCHANGE:TICKER" for non-US. US stocks use bare ticker.
@@ -38,7 +47,10 @@ const FINNHUB_PREFIX: Record<string, string> = {
  * Otherwise the holding's currency is used to pick the exchange suffix.
  */
 function toEohdSymbol(ticker: string, currency: string): string {
-  if (ticker.includes(".")) return ticker;
+  if (ticker.includes(".")) {
+    const [sym, exc] = ticker.split(".");
+    return `${sym}.${EODHD_CODE_REMAP[exc] ?? exc}`;
+  }
   const exchange = EODHD_EXCHANGE[currency] ?? "US";
   return `${ticker}.${exchange}`;
 }

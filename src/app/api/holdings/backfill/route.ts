@@ -6,6 +6,14 @@ export const maxDuration = 60;
 
 const EODHD_KEY = process.env.EODHD_API_KEY ?? "";
 
+const EODHD_CODE_REMAP: Record<string, string> = { SG: "SI", HKEX: "HK", ASX: "AU", MI: "MI" };
+
+function normalizeEohdTicker(ticker: string): string {
+  if (!ticker.includes(".")) return ticker;
+  const [sym, exc] = ticker.split(".");
+  return `${sym}.${EODHD_CODE_REMAP[exc] ?? exc}`;
+}
+
 async function fetchEohdHistory(symbol: string, from: string, to: string): Promise<Record<string, number>> {
   if (!EODHD_KEY || EODHD_KEY.startsWith("YOUR_") || EODHD_KEY === "demo") return {};
   const url = `https://eodhd.com/api/eod/${symbol}?from=${from}&to=${to}&fmt=json&api_token=${EODHD_KEY}`;
@@ -99,7 +107,7 @@ export async function POST() {
 
   // Fetch all historical prices in parallel (one call per ticker)
   const [rawPrices, rawFx] = await Promise.all([
-    Promise.all(equityTickers.map(async (t) => [t, await fetchEohdHistory(t, from, today)] as const)).then(Object.fromEntries),
+    Promise.all(equityTickers.map(async (t) => [t, await fetchEohdHistory(normalizeEohdTicker(t), from, today)] as const)).then(Object.fromEntries),
     fetchFxHistory(currencies, from, today),
   ]);
 
