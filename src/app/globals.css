@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* ================================================================
+   RUNTIME DESIGN TOKENS — source of truth.
+   Mutated at runtime by applyAccent() (src/lib/hexA.ts) and swapped
+   by the html.light class toggle. Var names are frozen: inline
+   styles across ~14 TSX files reference them directly.
+   ================================================================ */
 :root{
   /* obsidian aurora — cool near-black with a violet undertone */
   --bg-base:#0a0912;
@@ -22,41 +28,169 @@
   --serif:var(--font-serif),"DM Serif Display",Georgia,serif;
   --mono:var(--font-mono),"JetBrains Mono",ui-monospace,monospace;
   --ui:var(--font-ui),"Sora",system-ui,sans-serif;
-  --shadow-card:0 1px 0 rgba(255,255,255,0.03) inset, 0 18px 40px -24px rgba(0,0,0,0.8);
+  --card-shadow:0 1px 0 rgba(255,255,255,0.03) inset, 0 18px 40px -24px rgba(0,0,0,0.8);
   --r-card:16px;
+  --donut-track:rgba(255,255,255,0.04);
+  --pulse-c:rgba(52,211,153,.45);
 }
-*{box-sizing:border-box;}
 
-/* ---------- scrollbars: minimal & themed ---------- */
-*{scrollbar-width:thin;scrollbar-color:rgba(186,170,255,0.14) transparent;}
-*::-webkit-scrollbar{width:5px;height:5px;}
-*::-webkit-scrollbar-track{background:transparent;}
-*::-webkit-scrollbar-thumb{background:rgba(186,170,255,0.14);border-radius:10px;}
-*::-webkit-scrollbar-thumb:hover{background:rgba(186,170,255,0.28);}
-*::-webkit-scrollbar-corner{background:transparent;}
+/* LIGHT MODE tokens — toggled via html.light (kept unlayered beside
+   :root so specificity, not layer order, decides) */
+html.light {
+  --bg-base:       #eceaf4;
+  --bg-surface:    #f8f7fc;
+  --bg-elevated:   #e5e2f1;
+  --border-subtle: rgba(40,30,80,0.10);
+  --border-gold:   rgba(107,75,214,0.40);
+  --gold:          #6b4bd6;
+  --gold-dim:      #5a3cc0;
+  --accent-wash:   rgba(107,75,214,0.10);
+  --accent-tint:   rgba(107,75,214,0.15);
+  --accent-glow:   rgba(107,75,214,0.16);
+  --gain:          #0f8f5f;
+  --loss:          #cf3a55;
+  --fx-positive:   #2563c9;
+  --fx-negative:   #b8458f;
+  --text-primary:  #1b1730;
+  --text-secondary:#5b5676;
+  --text-muted:    #928db0;
+  --card-shadow:   0 1px 3px rgba(0,0,0,0.06);
+  --donut-track:   rgba(0,0,0,0.06);
+  --pulse-c:       rgba(28,122,82,0.45);
+}
 
-html{scroll-behavior:smooth;}
-body{
-  margin:0;background:var(--bg-base)!important;color:var(--text-primary);
-  font-family:var(--ui);font-weight:400;-webkit-font-smoothing:antialiased;
-  font-size:14px;line-height:1.45;
+/* ================================================================
+   TAILWIND THEME — token namespaces referencing the runtime vars.
+   `inline` makes utilities emit var(--x) directly (no :root token
+   emitted), so applyAccent() and html.light keep working.
+   ================================================================ */
+@theme inline {
+  --color-base: var(--bg-base);
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-subtle: var(--border-subtle);
+  --color-gold-soft: var(--border-gold);
+  --color-gold: var(--gold);
+  --color-gold-dim: var(--gold-dim);
+  --color-wash: var(--accent-wash);
+  --color-tint: var(--accent-tint);
+  --color-glow: var(--accent-glow);
+  --color-gain: var(--gain);
+  --color-loss: var(--loss);
+  --color-fx-up: var(--fx-positive);
+  --color-fx-down: var(--fx-negative);
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --font-serif: var(--serif);
+  --font-mono: var(--mono);
+  --font-mono--font-feature-settings: "tnum";
+  --font-ui: var(--ui);
+  --font-flag: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+  --shadow-card: var(--card-shadow);
+  --radius-card: var(--r-card);
 }
-/* aurora — soft accent light bleeding from the top, behind everything */
-body::after{
-  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
-  background:
-    radial-gradient(120% 78% at 50% -16%, var(--accent-glow) 0%, transparent 56%),
-    radial-gradient(80% 60% at 88% 4%, rgba(111,176,255,0.10) 0%, transparent 60%),
-    radial-gradient(70% 60% at 6% 0%, rgba(229,138,208,0.07) 0%, transparent 62%);
-  opacity:1;transition:opacity .6s ease;
+
+@theme {
+  /* 1:1 with the legacy max-width media queries; use as max-bpNNN: */
+  --breakpoint-bp1080: 1080px;
+  --breakpoint-bp900: 900px;
+  --breakpoint-bp768: 768px;
+  --breakpoint-bp600: 600px;
+  --breakpoint-bp480: 480px;
+  --breakpoint-bp380: 380px;
+
+  /* animation tokens; keyframes live below as plain CSS so legacy
+     classes keep working during the migration */
+  --animate-reveal: fadeSlideUp .5s cubic-bezier(.2,.7,.2,1) both;
+  --animate-spin-once: spin .8s ease;
+  --animate-spin-slow: spin .8s linear infinite;
+  --animate-pulse-dot: pulseDot 2s infinite;
+  --animate-fade-slide-in: fadeSlideIn .12s ease;
+  --animate-mm-fade: mmFadeIn .2s ease;
+  --animate-mm-slide: mmSlideIn .25s cubic-bezier(.22,1,.36,1);
+  --animate-blink: blink 1s steps(1) infinite;
+  --animate-skeleton: skPulse 1.3s ease-in-out infinite;
 }
-body.no-grain::after{opacity:.62;}
-/* grain */
-body::before{
-  content:"";position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:.42;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+
+/* light: variant — composes with the html.light class toggle */
+@custom-variant light (&:where(html.light, html.light *));
+
+/* Cross-app primitives. No padding in `card` — call sites pair it
+   with explicit padding utilities (px-5 py-4.5) or p-0. */
+@utility card {
+  position:relative;
+  background:linear-gradient(180deg,rgba(255,255,255,0.022),transparent 38%),var(--bg-surface);
+  border:1px solid var(--border-subtle);
+  border-radius:var(--r-card);
+  box-shadow:var(--card-shadow);
+  transition:border-color .28s ease;
+  &:hover{border-color:rgba(186,170,255,0.16);}
 }
-body.no-grain::before{display:none;}
+@utility inp {
+  background:var(--bg-elevated);
+  border:1px solid var(--border-subtle);
+  border-radius:9px;
+  padding:10px 12px;
+  color:var(--text-primary);
+  font-family:var(--ui);
+  font-size:13px;
+  outline:none;
+  transition:box-shadow .15s,border-color .15s;
+  width:100%;
+  &::placeholder{color:var(--text-muted);}
+  &:focus{border-color:var(--border-gold);box-shadow:0 0 0 3px var(--accent-tint);}
+}
+
+/* ================================================================
+   BASE — element-level styles (lose to utilities, beat preflight)
+   ================================================================ */
+@layer base {
+  /* scrollbars: minimal & themed */
+  *{scrollbar-width:thin;scrollbar-color:rgba(186,170,255,0.14) transparent;}
+  *::-webkit-scrollbar{width:5px;height:5px;}
+  *::-webkit-scrollbar-track{background:transparent;}
+  *::-webkit-scrollbar-thumb{background:rgba(186,170,255,0.14);border-radius:10px;}
+  *::-webkit-scrollbar-thumb:hover{background:rgba(186,170,255,0.28);}
+  *::-webkit-scrollbar-corner{background:transparent;}
+  html.light *{scrollbar-color:rgba(40,30,80,0.14) transparent;}
+  html.light *::-webkit-scrollbar-thumb{background:rgba(40,30,80,0.14);}
+  html.light *::-webkit-scrollbar-thumb:hover{background:rgba(40,30,80,0.28);}
+
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;background:var(--bg-base)!important;color:var(--text-primary);
+    font-family:var(--ui);font-weight:400;-webkit-font-smoothing:antialiased;
+    font-size:14px;line-height:1.45;
+  }
+  /* aurora — soft accent light bleeding from the top, behind everything */
+  body::after{
+    content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:
+      radial-gradient(120% 78% at 50% -16%, var(--accent-glow) 0%, transparent 56%),
+      radial-gradient(80% 60% at 88% 4%, rgba(111,176,255,0.10) 0%, transparent 60%),
+      radial-gradient(70% 60% at 6% 0%, rgba(229,138,208,0.07) 0%, transparent 62%);
+    opacity:1;transition:opacity .6s ease;
+  }
+  body.no-grain::after{opacity:.62;}
+  html.light body::after{opacity:.55;}
+  /* grain */
+  body::before{
+    content:"";position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:.42;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  }
+  body.no-grain::before{display:none;}
+  html.light body::before{opacity:0.25;}
+
+  svg[viewBox]{max-width:100%;}
+}
+
+/* ================================================================
+   LEGACY COMPONENT CLASSES — being migrated to Tailwind utilities
+   phase by phase. Layered so utilities on converted elements win.
+   ================================================================ */
+@layer components {
+
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;font-feature-settings:"tnum";}
 .serif{font-family:var(--serif);font-weight:400;}
 .ui{font-family:var(--ui);}
@@ -91,7 +225,6 @@ body.no-grain::before{display:none;}
 .refresh{width:34px;height:34px;border-radius:9px;border:1px solid var(--border-subtle);background:var(--bg-surface);color:var(--text-secondary);display:grid;place-items:center;cursor:pointer;transition:color .2s,border-color .2s,background .2s;flex-shrink:0;}
 .refresh:hover{color:var(--gold);border-color:var(--border-gold);}
 .refresh.spin svg{animation:spin .8s ease;}
-@keyframes spin{to{transform:rotate(360deg);}}
 /* hamburger: hidden on desktop, shown on mobile */
 .hamburger-btn{display:none!important;}
 
@@ -111,7 +244,7 @@ body.no-grain::before{display:none;}
 @keyframes mmFadeIn{from{opacity:0;}to{opacity:1;}}
 @keyframes mmSlideIn{from{transform:translateX(-100%);}to{transform:translateX(0);}}
 
-/* react-toastify: match the terminal palette */
+/* react-toastify: match the terminal palette — DELETE with sonner migration */
 .Toastify__toast{background:var(--bg-elevated);border:1px solid var(--border-subtle);font-size:13px;font-weight:500;border-radius:10px;}
 .Toastify__toast--success{border-color:rgba(70,216,160,0.28);}
 .Toastify__toast--error{border-color:rgba(255,111,139,0.28);}
@@ -162,8 +295,8 @@ body.no-grain::before{display:none;}
 .sm-metric .sm-sub{font-size:12px;}
 .sm-foot{display:flex;align-items:center;justify-content:space-between;}
 .sm-live{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);}
-.sm-live i{width:6px;height:6px;border-radius:50%;background:var(--gain);box-shadow:0 0 0 0 rgba(52,211,153,.5);animation:pulseDot 2s infinite;}
-@keyframes pulseDot{0%{box-shadow:0 0 0 0 rgba(52,211,153,.45);}70%{box-shadow:0 0 0 6px rgba(52,211,153,0);}100%{box-shadow:0 0 0 0 rgba(52,211,153,0);}}
+.sm-live i{width:6px;height:6px;border-radius:50%;background:var(--gain);box-shadow:0 0 0 0 var(--pulse-c);animation:pulseDot 2s infinite;}
+@keyframes pulseDot{0%{box-shadow:0 0 0 0 var(--pulse-c);}70%{box-shadow:0 0 0 6px transparent;}100%{box-shadow:0 0 0 0 transparent;}}
 
 /* legend */
 .legend{display:flex;flex-wrap:wrap;gap:7px 14px;}
@@ -172,7 +305,7 @@ body.no-grain::before{display:none;}
 .legend-item .lg-pct{color:var(--text-muted);font-size:11px;margin-left:auto;}
 
 /* cards */
-.card{position:relative;background:linear-gradient(180deg,rgba(255,255,255,0.022),transparent 38%),var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--r-card);padding:18px 20px;box-shadow:var(--shadow-card);transition:border-color .28s ease;}
+.card{position:relative;background:linear-gradient(180deg,rgba(255,255,255,0.022),transparent 38%),var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--r-card);padding:18px 20px;box-shadow:var(--card-shadow);transition:border-color .28s ease;}
 .card:hover{border-color:rgba(186,170,255,0.16);}
 .card.no-pad{padding:0;overflow:hidden;overflow-x:auto;}
 .card-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px;}
@@ -539,18 +672,19 @@ html.light .date-inp::-webkit-calendar-picker-indicator:hover{opacity:.85;}
 .step-arrow{color:var(--text-muted);}
 
 /* skeleton */
-.sk{background:var(--bg-elevated);border-radius:8px;animation:pulse 1.3s ease-in-out infinite;}
-@keyframes pulse{0%,100%{opacity:.45;}50%{opacity:.85;}}
+.sk{background:var(--bg-elevated);border-radius:8px;animation:skPulse 1.3s ease-in-out infinite;}
+@keyframes skPulse{0%,100%{opacity:.45;}50%{opacity:.85;}}
 
 /* reveal */
 @keyframes fadeSlideUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
 .reveal{animation:fadeSlideUp .5s cubic-bezier(.2,.7,.2,1) both;}
+@keyframes spin{to{transform:rotate(360deg);}}
 
 /* overview hero stat cards (folded in from rail) */
 .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
-.stat-card{position:relative;background:linear-gradient(180deg,rgba(255,255,255,0.025),transparent 42%),var(--bg-surface);border:1px solid var(--border-subtle);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:5px;box-shadow:var(--shadow-card);transition:transform .26s cubic-bezier(.2,.7,.2,1),border-color .26s,box-shadow .26s;}
+.stat-card{position:relative;background:linear-gradient(180deg,rgba(255,255,255,0.025),transparent 42%),var(--bg-surface);border:1px solid var(--border-subtle);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:5px;box-shadow:var(--card-shadow);transition:transform .26s cubic-bezier(.2,.7,.2,1),border-color .26s,box-shadow .26s;}
 .stat-card:hover{transform:translateY(-3px);border-color:rgba(186,170,255,0.18);box-shadow:0 22px 44px -26px rgba(0,0,0,0.9);}
-.stat-card.accent{border-left:2px solid var(--gold);box-shadow:var(--shadow-card),-14px 0 36px -28px var(--accent-glow);}
+.stat-card.accent{border-left:2px solid var(--gold);box-shadow:var(--card-shadow),-14px 0 36px -28px var(--accent-glow);}
 .stat-card.accent:hover{box-shadow:0 22px 44px -26px rgba(0,0,0,0.9),-16px 0 40px -26px var(--accent-glow);}
 .stat-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--text-muted);font-weight:600;}
 .stat-value{font-size:23px;font-weight:600;letter-spacing:-0.01em;}
@@ -602,44 +736,14 @@ html.light .date-inp::-webkit-calendar-picker-indicator:hover{opacity:.85;}
 .movers-col,.mv-name{min-width:0;}
 .attr-rows{flex-wrap:wrap;gap:10px 24px;}
 .cell-name .ui,.dc-name,.perf-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-svg[viewBox]{max-width:100%;}
-
-/* motion tweak off */
-body.no-motion .reveal{animation:none!important;}
-body.no-motion .sm-live i,body.no-motion .refresh.spin svg{animation:none!important;}
-body.no-motion .perf-bar{transition:none!important;}
 
 /* ============================================
-   LIGHT MODE — toggle via html.light class
+   LIGHT MODE — targeted component overrides
+   (token swaps live in html.light at the top)
    ============================================ */
-html.light {
-  --bg-base:       #eceaf4;
-  --bg-surface:    #f8f7fc;
-  --bg-elevated:   #e5e2f1;
-  --border-subtle: rgba(40,30,80,0.10);
-  --border-gold:   rgba(107,75,214,0.40);
-  --gold:          #6b4bd6;
-  --gold-dim:      #5a3cc0;
-  --accent-wash:   rgba(107,75,214,0.10);
-  --accent-tint:   rgba(107,75,214,0.15);
-  --accent-glow:   rgba(107,75,214,0.16);
-  --gain:          #0f8f5f;
-  --loss:          #cf3a55;
-  --fx-positive:   #2563c9;
-  --fx-negative:   #b8458f;
-  --text-primary:  #1b1730;
-  --text-secondary:#5b5676;
-  --text-muted:    #928db0;
-}
-html.light *{scrollbar-color:rgba(40,30,80,0.14) transparent;}
-html.light *::-webkit-scrollbar-thumb{background:rgba(40,30,80,0.14);}
-html.light *::-webkit-scrollbar-thumb:hover{background:rgba(40,30,80,0.28);}
 html.light .nerve{background:rgba(236,234,244,0.86)!important;}
 html.light .tabbar{background:rgba(236,234,244,0.86)!important;}
-html.light body::after{opacity:.55;}
-html.light .card{box-shadow:0 1px 3px rgba(0,0,0,0.06);}
 html.light .summary{border-right-color:rgba(0,0,0,0.09);}
-html.light .stat-card{box-shadow:0 1px 3px rgba(0,0,0,0.06);}
 html.light .htable th{border-bottom-color:rgba(0,0,0,0.12);}
 html.light .htable td{border-bottom-color:rgba(0,0,0,0.06);}
 html.light .hrow:hover{background:var(--bg-elevated);}
@@ -653,10 +757,8 @@ html.light .icon-btn.ghost{background:var(--bg-surface);}
 html.light .icon-btn.outline{border-color:rgba(0,0,0,0.12);}
 html.light .chart-tip{background:var(--bg-surface);border-color:var(--border-gold);box-shadow:0 4px 16px rgba(0,0,0,0.12);}
 html.light .ct-val{color:var(--gold);}
-html.light svg circle[stroke="rgba(255,255,255,0.04)"]{stroke:rgba(0,0,0,0.06);}
 html.light .sk{background:var(--bg-elevated);}
 html.light .detail-card{background:var(--bg-elevated);border-color:rgba(0,0,0,0.1);}
-html.light body::before{opacity:0.25;}
 html.light .versus{background:var(--bg-surface);}
 html.light .fpill.active{background:var(--accent-wash);}
 html.light .mover-row:hover{background:var(--bg-elevated);}
@@ -664,14 +766,9 @@ html.light .mv-drawer{background:var(--bg-elevated);}
 html.light .dropzone{background:var(--bg-surface);}
 html.light .dropzone:hover,html.light .dropzone.over{background:var(--bg-elevated);}
 html.light .refresh{background:var(--bg-surface);}
-html.light .sm-live i{box-shadow:0 0 0 0 rgba(28,122,82,0.45);}
-@keyframes pulseDotLight{0%{box-shadow:0 0 0 0 rgba(28,122,82,0.45);}70%{box-shadow:0 0 0 6px rgba(28,122,82,0);}100%{box-shadow:0 0 0 0 rgba(28,122,82,0);}}
-html.light .sm-live i{animation:pulseDotLight 2s infinite;}
-
-/* ============================================ */
 
 /* ================================================
-   RESPONSIVE — 5 breakpoints
+   RESPONSIVE — 6 breakpoints
    ================================================ */
 
 /* 1080px — hide sidebar, collapse to 1-col grids */
@@ -801,6 +898,13 @@ html.light .sm-live i{animation:pulseDotLight 2s infinite;}
   .mover-row{grid-template-columns:1fr auto 12px;gap:6px;}
   .wf-row{grid-template-columns:36px 1fr 80px;gap:6px;}
 }
+
+} /* end @layer components */
+
+/* motion tweak off — unlayered so it beats everything */
+body.no-motion .reveal{animation:none!important;}
+body.no-motion .sm-live i,body.no-motion .refresh.spin svg{animation:none!important;}
+body.no-motion .perf-bar{transition:none!important;}
 
 @media (prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important;}
