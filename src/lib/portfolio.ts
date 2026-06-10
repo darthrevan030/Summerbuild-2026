@@ -261,7 +261,8 @@ export function generatePortfolioSeries(
   ];
 }
 
-/** Builds per-currency FX impact series from real snapshots, falling back to a
+/** Builds per-currency FX impact series with one point per daily snapshot
+ *  (labels are "YYYY-MM-DD", enabling 1D/1W chart granularity), falling back to a
  *  2-point seed (0 at earliest buy date → current impact today) when no snapshots exist. */
 export function generateFxSeries(
   snapshots: SnapshotRow[],
@@ -276,26 +277,27 @@ export function generateFxSeries(
   const earliest = fxHoldings.length > 0
     ? fxHoldings.reduce((min, h) => (h.buyDate < min ? h.buyDate : min), fxHoldings[0].buyDate)
     : new Date().toISOString().slice(0, 10);
-  const startYm = earliest.slice(0, 7);
+  const startDate = earliest.slice(0, 10);
 
   if (snapshots.length > 0) {
-    const byMonth = snapshotsByMonth(snapshots);
+    const byDate = new Map<string, SnapshotRow>();
+    for (const s of snapshots) byDate.set(s.recordedDate, s);
     const fxLabels: string[] = [];
     const series: FxSeriesPoint[] = [];
     let i = 0;
-    for (const [ym, s] of byMonth.entries()) {
-      fxLabels.push(ym);
+    for (const [date, s] of [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+      fxLabels.push(date);
       const point: FxSeriesPoint = { i };
       for (const ccy of activeCurrencies) point[ccy] = Math.round(s.fxByCurrency[ccy] ?? 0);
       series.push(point);
       i++;
     }
-    // Only 1 snapshot month → prepend zero point so the chart always has ≥ 2 points
-    if (series.length < 2 && startYm < fxLabels[0]) {
+    // Only 1 snapshot → prepend zero point so the chart always has ≥ 2 points
+    if (series.length < 2 && startDate < fxLabels[0]) {
       const zeroPoint: FxSeriesPoint = { i: 0 };
       for (const ccy of activeCurrencies) zeroPoint[ccy] = 0;
       series.unshift(zeroPoint);
-      fxLabels.unshift(startYm);
+      fxLabels.unshift(startDate);
       for (let j = 0; j < series.length; j++) series[j].i = j;
     }
     return { series, fxLabels };
@@ -304,7 +306,7 @@ export function generateFxSeries(
   // Fallback: 2-point seed — FX impact was 0 at earliest buy, is current value today
   if (fxHoldings.length === 0) return { series: [], fxLabels: [] };
 
-  const todayYm = new Date().toISOString().slice(0, 7);
+  const today = new Date().toISOString().slice(0, 10);
   const currentImpact: Record<string, number> = {};
   for (const c of currencyCards) currentImpact[c.code.toLowerCase()] = Math.round(c.impact);
 
@@ -315,6 +317,6 @@ export function generateFxSeries(
     nowPoint[ccy] = currentImpact[ccy] ?? 0;
   }
 
-  if (startYm === todayYm) return { series: [], fxLabels: [] };
-  return { series: [zeroPoint, nowPoint], fxLabels: [startYm, todayYm] };
+  if (startDate >= today) return { series: [], fxLabels: [] };
+  return { series: [zeroPoint, nowPoint], fxLabels: [startDate, today] };
 }

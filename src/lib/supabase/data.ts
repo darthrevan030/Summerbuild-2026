@@ -197,21 +197,44 @@ export interface SnapshotRow {
   fxByCurrency: Record<string, number>;
 }
 
+// PostgREST caps every response at the project's "Max rows" setting (default 1000),
+// which silently truncates a client-side .limit(). Page with .range() so the full
+// snapshot history comes through regardless of that cap or how many rows accrue.
+const SNAPSHOT_PAGE = 1000;
+
 export async function fetchSnapshots(userId: string): Promise<SnapshotRow[]> {
   const supabase = await makeServerClient();
-  const { data } = await supabase
-    .from("portfolio_snapshots")
-    .select("recorded_date, value_sgd, cost_sgd, fx_impact_sgd, fx_by_currency")
-    .eq("user_id", userId)
-    .order("recorded_date", { ascending: true })
-    .limit(10000);
-  return (data ?? []).map((r) => ({
-    recordedDate: r.recorded_date as string,
-    valueSgd: Number(r.value_sgd),
-    costSgd: Number(r.cost_sgd),
-    fxImpactSgd: Number(r.fx_impact_sgd),
-    fxByCurrency: (r.fx_by_currency ?? {}) as Record<string, number>,
-  }));
+  const rows: SnapshotRow[] = [];
+
+  for (let from = 0; ; from += SNAPSHOT_PAGE) {
+    const { data, error } = await supabase
+      .from("portfolio_snapshots")
+      .select("recorded_date, value_sgd, cost_sgd, fx_impact_sgd, fx_by_currency")
+      .eq("user_id", userId)
+      .order("recorded_date", { ascending: true })
+      .range(from, from + SNAPSHOT_PAGE - 1);
+
+    if (error) {
+      console.error("[fetchSnapshots]", error.message);
+      break;
+    }
+    if (!data || data.length === 0) break;
+
+    for (const r of data) {
+      rows.push({
+        recordedDate: r.recorded_date as string,
+        valueSgd: Number(r.value_sgd),
+        costSgd: Number(r.cost_sgd),
+        fxImpactSgd: Number(r.fx_impact_sgd),
+        fxByCurrency: (r.fx_by_currency ?? {}) as Record<string, number>,
+      });
+    }
+
+    // A short page means we've reached the end — no further request needed.
+    if (data.length < SNAPSHOT_PAGE) break;
+  }
+
+  return rows;
 }
 
 export async function recordSnapshot(userId: string, holdings: HoldingRow[]): Promise<void> {

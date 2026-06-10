@@ -6,15 +6,18 @@ interface FXAreaProps {
   data: Record<string, number>[];
   colors: Record<string, string>;
   keys: string[];
-  labels?: string[];   // "YYYY-MM" strings, same length as data
+  labels?: string[];   // "YYYY-MM" or "YYYY-MM-DD" strings, same length as data
   height?: number;
   valFmt?: (v: number) => string;
 }
 
 const MONS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-function fmtYM(ym: string): string {
-  const [yr, mo] = ym.split("-");
-  return `${MONS[parseInt(mo) - 1]} ${yr.slice(2)}`;
+// "YYYY-MM" → "Jun 26"; "YYYY-MM-DD" → "Jun 9" (current year) or "Jun 9 '25" (past years)
+function fmtTick(label: string): string {
+  const [yr, mo, dy] = label.split("-");
+  if (!dy) return `${MONS[parseInt(mo) - 1]} ${yr.slice(2)}`;
+  const monthDay = `${MONS[parseInt(mo) - 1]} ${parseInt(dy)}`;
+  return parseInt(yr) === new Date().getFullYear() ? monthDay : `${monthDay} '${yr.slice(2)}`;
 }
 
 export function FXArea({ data, colors, keys, labels, height = 230, valFmt }: FXAreaProps) {
@@ -100,7 +103,7 @@ export function FXArea({ data, colors, keys, labels, height = 230, valFmt }: FXA
           const anchor  = isFirst ? "start" : isLast ? "end" : "middle";
           return (
             <text key={k} x={X(i)} y={height - 6} fill="var(--text-muted)" fontSize="10" textAnchor={anchor} className="mono">
-              {fmtYM(labels[i])}
+              {fmtTick(labels[i])}
             </text>
           );
         })}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { fetchHoldings } from "@/lib/supabase/data";
+import { fetchHoldings, fetchSnapshots } from "@/lib/supabase/data";
 
 export const maxDuration = 60;
 
@@ -89,12 +89,10 @@ export async function POST() {
   const from = holdings.reduce((min, h) => (h.buyDate < min ? h.buyDate : min), holdings[0].buyDate);
   const allDates = dateRange(from, today);
 
-  // Skip dates that already have snapshots
-  const { data: existing } = await supabase
-    .from("portfolio_snapshots")
-    .select("recorded_date")
-    .eq("user_id", user.id);
-  const existingDates = new Set((existing ?? []).map((r: { recorded_date: string }) => r.recorded_date as string));
+  // Skip dates that already have snapshots — use the paginated fetch so the
+  // PostgREST 1000-row cap doesn't hide existing dates and trigger re-fetches
+  const existingSnapshots = await fetchSnapshots(user.id);
+  const existingDates = new Set(existingSnapshots.map((s) => s.recordedDate));
 
   const missingDates = allDates.filter((d) => !existingDates.has(d));
   if (missingDates.length === 0) return NextResponse.json({ inserted: 0, skipped: existingDates.size });

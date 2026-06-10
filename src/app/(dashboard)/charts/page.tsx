@@ -7,7 +7,7 @@ import { Legend } from "@/components/charts/Legend";
 import { AreaTrend } from "@/components/charts/AreaTrend";
 import { FXArea } from "@/components/charts/FXArea";
 import { pct } from "@/lib/formatters";
-import { useDateRange, RANGES, RANGES_DAILY } from "@/lib/useDateRange";
+import { useDateRange, RANGES_DAILY } from "@/lib/useDateRange";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
 
@@ -193,16 +193,18 @@ function FXImpactCard() {
   const { fxSeries, fxColors, fxLabels, baseCurrency, fmtSigned } = usePortfolio();
 
   const {
-    startDate, endDate, minDate, maxDate,
+    startDate, endDate,
     activePreset, showCustom,
     selectPreset, handleStartChange, handleEndChange, toggleCustom,
-  } = useDateRange(fxLabels);
+  } = useDateRange(fxLabels, RANGES_DAILY);
 
   const fxKeys = Object.keys(fxColors);
 
   const { filteredSeries, filteredLabels } = useMemo(() => {
+    // Normalise a YYYY-MM endDate to end-of-month so it includes all daily points in that month
+    const endCmp = endDate.length === 7 ? endDate + "-31" : endDate;
     const si = fxLabels.findIndex((l) => l >= startDate);
-    const eiRev = [...fxLabels].reverse().findIndex((l) => l <= endDate);
+    const eiRev = [...fxLabels].reverse().findIndex((l) => l <= endCmp);
     const ei = eiRev < 0 ? -1 : fxLabels.length - 1 - eiRev;
     if (si < 0 || ei < 0 || si > ei) return { filteredSeries: fxSeries, filteredLabels: fxLabels };
     const slicedSeries = fxSeries.slice(si, ei + 1);
@@ -225,7 +227,7 @@ function FXImpactCard() {
       {fxSeries.length > 0 ? (
         <>
           <RangeBar
-            ranges={RANGES}
+            ranges={RANGES_DAILY}
             activePreset={activePreset}
             showCustom={showCustom}
             onPreset={selectPreset}
@@ -235,12 +237,12 @@ function FXImpactCard() {
             <div className="date-range-row">
               <div className="date-field">
                 <label className="date-label ui muted xs">From</label>
-                <input type="month" className="date-inp mono" value={startDate} onChange={(e) => handleStartChange(e.target.value)} />
+                <input type="month" className="date-inp mono" value={startDate.slice(0, 7)} onChange={(e) => handleStartChange(e.target.value)} />
               </div>
               <span className="date-sep ui muted">—</span>
               <div className="date-field">
                 <label className="date-label ui muted xs">To</label>
-                <input type="month" className="date-inp mono" value={endDate} onChange={(e) => handleEndChange(e.target.value)} />
+                <input type="month" className="date-inp mono" value={endDate.slice(0, 7)} onChange={(e) => handleEndChange(e.target.value)} />
               </div>
               <button className="date-reset ui muted" onClick={() => selectPreset(999)}>Reset</button>
             </div>
