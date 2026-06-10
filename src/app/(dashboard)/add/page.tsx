@@ -10,7 +10,6 @@ import { useCurrencies } from "@/hooks/useCurrencies";
 import { useExchanges } from "@/hooks/useExchanges";
 
 const ASSET_TYPES = ["Equity", "ETF", "REIT", "Gold", "RE"];
-const STRATEGIES  = ["long_term", "active", "speculative", "physical"];
 
 const PHYSICAL_TYPES = new Set(["Gold", "RE"]);
 
@@ -85,13 +84,16 @@ function ManualForm() {
 
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  // Auto-fetch historical FX rate when date or currency changes
+  // Auto-fetch historical FX rate when date or currency changes.
+  // All state updates run inside the scheduled callback (SGD with 0 delay,
+  // others debounced) so none fire synchronously during the effect.
   useEffect(() => {
     if (fxDebounce.current) clearTimeout(fxDebounce.current);
-    if (form.currency === "SGD") { set("buy_fx_rate", "1"); setFxAuto(true); return; }
-    if (form.buy_date.length < 10) return;
+    const isSgd = form.currency === "SGD";
+    if (!isSgd && form.buy_date.length < 10) return;
 
     fxDebounce.current = setTimeout(async () => {
+      if (isSgd) { set("buy_fx_rate", "1"); setFxAuto(true); return; }
       setFetchingFx(true);
       try {
         const today = new Date().toISOString().slice(0, 10);
@@ -101,7 +103,7 @@ function ManualForm() {
         if (rate) { set("buy_fx_rate", (1 / rate).toFixed(4)); setFxAuto(true); }
       } catch { /* silent — user can still type manually */ }
       finally { setFetchingFx(false); }
-    }, 400);
+    }, isSgd ? 0 : 400);
 
     return () => { if (fxDebounce.current) clearTimeout(fxDebounce.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
