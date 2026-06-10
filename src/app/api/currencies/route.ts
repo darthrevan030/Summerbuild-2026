@@ -1,4 +1,4 @@
-import { createTableListGET } from "@/lib/api/list-route";
+import { createTableListGET } from "@/lib/api/server/list-route";
 
 export interface CurrencyRow {
   code: string;

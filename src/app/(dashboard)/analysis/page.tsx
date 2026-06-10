@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { usePortfolio } from "@/context/portfolio";
 import { Icon } from "@/components/Icon";
-import { streamAnalysis } from "@/lib/api-client";
+import { streamSentiment, streamAsk } from "@/lib/api/client/analyst-api";
 import { pct } from "@/lib/formatters";
 import type { HoldingRow } from "@/types/holding";
 
@@ -32,7 +32,7 @@ const HL_DOT_CLS: Record<string, string> = {
   neu: "bg-muted",
 };
 
-// ---- curated fallback data ----
+// ---- curated fallback data (demo only — shown when the AI call fails) ----
 const FALLBACK_ITEMS: Record<string, { score: number; summary: string; drivers: string[] }> = {
   AAPL:   { score: 62, summary: "Resilient iPhone demand and double-digit services growth; the AI roadmap and steady buybacks support the multiple.", drivers: ["Services margin", "AI roadmap", "Buybacks"] },
   CICT:   { score: 16, summary: "Singapore retail and office occupancy stays firm; rate cuts would help, but new office supply caps the upside.", drivers: ["Rate cuts", "High occupancy", "Office supply"] },
@@ -290,39 +290,40 @@ function AskBox({ holdings }: { holdings: HoldingRow[] }) {
   const [q, setQ]         = useState("");
   const [ans, setAns]     = useState("");
   const [phase, setPhase] = useState<"idle" | "thinking" | "typing" | "done">("idle");
-  const timer             = useRef<NodeJS.Timeout | null>(null);
   const abortRef          = useRef<AbortController | null>(null);
 
-  useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
-
-  const typewrite = (full: string) => {
-    if (timer.current) clearInterval(timer.current);
-    let i = 0; setAns(""); setPhase("typing");
-    timer.current = setInterval(() => {
-      i += 2; setAns(full.slice(0, i));
-      if (i >= full.length) { if (timer.current) clearInterval(timer.current); setPhase("done"); }
-    }, 14);
-  };
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const ask = async (text?: string) => {
     const query = (text ?? q).trim();
-    if (!query || phase === "thinking") return;
+    if (!query || phase === "thinking" || phase === "typing") return;
     if (text) setQ(text);
     setPhase("thinking"); setAns("");
     abortRef.current?.abort();
     abortRef.current = new AbortController();
-    const ctx = holdings.map((h) => `${h.name} (${h.assetType}, ${h.totalPct >= 0 ? "+" : ""}${h.totalPct.toFixed(1)}%)`).join("; ");
+
+    const askHoldings = holdings.map((h) => ({ name: h.name, assetType: h.assetType, totalPct: h.totalPct }));
     const totalSGD = holdings.reduce((s, h) => s + h.valueSGD, 0);
-    const prompt =
-      `You are a concise portfolio analyst inside a personal wealth terminal. ` +
-      `Portfolio: total S$${Math.round(totalSGD).toLocaleString()}, holdings: ${ctx}. ` +
-      `This is a design demo — no financial advice or disclaimers.\n\nUser question: "${query}"\n\nAnswer in 2–3 short, specific sentences. Plain text only, no markdown.`;
-    let full = "";
+
     try {
-      await streamAnalysis(prompt, (chunk) => { full += chunk; }, abortRef.current.signal);
-      typewrite(full.trim() || "No response received.");
-    } catch {
-      typewrite("The analysis engine is offline in this preview. Once connected, this answers questions about your book in plain language.");
+      let first = true;
+      const { text: full, stopReason } = await streamAsk(
+        query,
+        askHoldings,
+        totalSGD,
+        (chunk) => {
+          if (first) { setPhase("typing"); first = false; }
+          setAns((prev) => prev + chunk);
+        },
+        abortRef.current.signal
+      );
+      if (!full.trim()) setAns("No response received.");
+      if (stopReason === "max_tokens") setAns((prev) => prev + " …");
+      setPhase("done");
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return; // superseded by a newer ask
+      setAns("The analysis engine is offline in this preview. Once connected, this answers questions about your book in plain language.");
+      setPhase("done");
     }
   };
 
@@ -343,10 +344,10 @@ function AskBox({ holdings }: { holdings: HoldingRow[] }) {
         <button
           className={BTN_GOLD}
           style={{ margin: 0, padding: "11px 20px", gridColumn: "auto" }}
-          disabled={phase === "thinking"}
+          disabled={phase === "thinking" || phase === "typing"}
           onClick={() => ask()}
         >
-          {phase === "thinking" ? "Thinking…" : "Ask"}
+          {phase === "thinking" || phase === "typing" ? "Thinking…" : "Ask"}
         </button>
       </div>
       <div className="flex gap-2 flex-wrap">
@@ -373,7 +374,11 @@ interface AnalysisData {
   source: "ai" | "sample";
 }
 
-let SENT_CACHE: AnalysisData | null = null;
+// cache keyed on a holdings fingerprint — invalidates when the portfolio changes
+let SENT_CACHE: { key: string; data: AnalysisData } | null = null;
+
+const holdingsKey = (holdings: HoldingRow[]) =>
+  holdings.map((h) => `${h.ticker}:${h.sparkData.at(-1) ?? 0}`).join("|");
 
 function buildFallback(holdings: HoldingRow[]): AnalysisData {
   const items = holdings.map((h, i) => {
@@ -394,20 +399,20 @@ async function runSentimentAI(holdings: HoldingRow[]): Promise<AnalysisData> {
     delta:     priceDelta(h.sparkData),
   }));
 
-  const prompt =
-    "You are an equity & macro sentiment analyst inside a personal wealth terminal. Assess current market sentiment for each holding below. This is a design demo — reason from your general knowledge; do NOT claim live data and do NOT give financial advice.\n\n" +
-    'Respond with ONLY minified JSON (no markdown, no commentary) in exactly this shape:\n' +
-    '{"overall":{"score":INT,"note":"<=13 words"},"items":[{"id":"ID","score":INT,"summary":"<=24 words","drivers":["<=3 words","<=3 words","<=3 words"]}]}\n' +
-    "score is an integer from -100 (very bearish) to 100 (very bullish). Echo back each id exactly.\n\nHoldings:\n" +
-    assets.map((a) => {
-      const deltaStr = a.delta != null ? ` | 30d price: ${a.delta >= 0 ? "+" : ""}${a.delta.toFixed(1)}%` : "";
-      return `- id=${a.id} | ${a.name} | ${a.type}${deltaStr}`;
-    }).join("\n");
+  const { text, stopReason } = await streamSentiment(
+    assets.map(({ id, name, type, delta }) => ({ id, name, type, delta }))
+  );
 
-  let text = "";
-  await streamAnalysis(prompt, (chunk) => { text += chunk; });
+  if (stopReason === "max_tokens") {
+    // Truncated JSON won't parse — fail loudly so the caller falls back
+    // and the reason is visible in the console instead of a silent swap.
+    throw new Error("sentiment response truncated (max_tokens)");
+  }
+
   const a = text.indexOf("{"), b = text.lastIndexOf("}");
+  if (a === -1 || b <= a) throw new Error("no JSON in sentiment response");
   const json = JSON.parse(text.slice(a, b + 1));
+
   const byId: Record<string, { score: number; summary: string; drivers: string[] }> = {};
   (json.items || []).forEach((x: { id: string; score: number; summary: string; drivers: string[] }) => { byId[String(x.id)] = x; });
 
@@ -422,30 +427,34 @@ async function runSentimentAI(holdings: HoldingRow[]): Promise<AnalysisData> {
 
 export default function AnalysisPage() {
   const { holdings } = usePortfolio();
+  const key = holdingsKey(holdings);
+  const cached = SENT_CACHE?.key === key ? SENT_CACHE.data : null;
+
   // Show fallback data immediately — AI runs in background and upgrades the state
-  const [data, setData]       = useState<AnalysisData>(() => SENT_CACHE ?? buildFallback(holdings));
-  const [aiRunning, setAiRunning] = useState(!SENT_CACHE);
+  const [data, setData]           = useState<AnalysisData>(() => cached ?? buildFallback(holdings));
+  const [aiRunning, setAiRunning] = useState(!cached);
 
   const run = async () => {
     setAiRunning(true);
     let res: AnalysisData;
     try { res = await runSentimentAI(holdings); }
-    catch { res = { ...buildFallback(holdings), source: "sample" }; }
-    SENT_CACHE = res; setData(res); setAiRunning(false);
+    catch (err) { console.warn("sentiment AI failed, using sample data:", err); res = buildFallback(holdings); }
+    SENT_CACHE = { key, data: res }; setData(res); setAiRunning(false);
   };
 
   useEffect(() => {
-    if (SENT_CACHE) return;
+    if (cached) return;
     let live = true;
     (async () => {
       let res: AnalysisData;
       try { res = await runSentimentAI(holdings); }
-      catch { res = { ...buildFallback(holdings), source: "sample" }; }
-      if (live) { SENT_CACHE = res; setData(res); setAiRunning(false); }
+      catch (err) { console.warn("sentiment AI failed, using sample data:", err); res = buildFallback(holdings); }
+      if (live) { SENT_CACHE = { key, data: res }; setData(res); setAiRunning(false); }
     })();
     return () => { live = false; };
+  // re-run when the portfolio fingerprint changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [key]);
 
   const left  = data.items.filter((_, i) => i % 2 === 0);
   const right = data.items.filter((_, i) => i % 2 === 1);
@@ -456,7 +465,7 @@ export default function AnalysisPage() {
         <div>
           <div className="text-[10.5px] uppercase tracking-[.14em] text-gold font-semibold">AI Analysis</div>
           <h2 className="font-serif font-normal text-[26px] mt-1.5 mb-1 tracking-[.2px]">Market sentiment</h2>
-          <div className="text-[13px] text-secondary max-w-[440px]">A live read on every holding — direction, conviction, and the drivers moving each position.</div>
+          <div className="text-[13px] text-secondary max-w-[440px]">An AI read on every holding — direction, conviction, and the drivers moving each position.</div>
         </div>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-[7px] text-[11px] text-secondary">
