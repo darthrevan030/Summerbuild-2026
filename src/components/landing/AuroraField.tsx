@@ -78,7 +78,7 @@ export function AuroraField() {
       const count = Math.round(base * Math.min(1.4, (W * H) / (1440 * 900)));
       particles = Array.from({ length: count }, () => ({
         x: Math.random() * W, y: Math.random() * H,
-        r: 0.6 + Math.random() * 1.4, a: 0.04 + Math.random() * 0.12,
+        r: 0.6 + Math.random() * 1.4, a: 0.03 + Math.random() * 0.07,
         vy: 4 + Math.random() * 10,
       }));
     }
@@ -108,8 +108,9 @@ export function AuroraField() {
         const rad = b.r * Math.max(ow, oh);
         const [r, g, bl] = b.col;
         const grd = octx.createRadialGradient(cx, cy, 0, cx, cy, rad);
-        grd.addColorStop(0, `rgba(${r},${g},${bl},0.42)`);
-        grd.addColorStop(0.45, `rgba(${r},${g},${bl},0.12)`);
+        // Subtle: a gentle violet glow over the near-black base, not a wash.
+        grd.addColorStop(0, `rgba(${r},${g},${bl},0.16)`);
+        grd.addColorStop(0.5, `rgba(${r},${g},${bl},0.04)`);
         grd.addColorStop(1, `rgba(${r},${g},${bl},0)`);
         octx.fillStyle = grd;
         octx.fillRect(0, 0, ow, oh);
@@ -126,8 +127,8 @@ export function AuroraField() {
       // cursor spotlight
       const sx = pointer.x * W, sy = pointer.y * H;
       const [gr, gg, gb] = palette.gold;
-      const sg = ctx!.createRadialGradient(sx, sy, 0, sx, sy, Math.max(W, H) * 0.28);
-      sg.addColorStop(0, `rgba(${gr},${gg},${gb},${pointer.active ? 0.1 : 0.05})`);
+      const sg = ctx!.createRadialGradient(sx, sy, 0, sx, sy, Math.max(W, H) * 0.26);
+      sg.addColorStop(0, `rgba(${gr},${gg},${gb},${pointer.active ? 0.055 : 0.03})`);
       sg.addColorStop(1, `rgba(${gr},${gg},${gb},0)`);
       ctx!.globalCompositeOperation = "lighter";
       ctx!.fillStyle = sg;

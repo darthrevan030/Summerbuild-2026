@@ -176,7 +176,7 @@ export default function LandingPage() {
                 <div className="font-mono text-[clamp(30px,4vw,42px)] font-semibold text-gold">
                   <CountUp to={n.value} suffix={n.suffix} />
                 </div>
-                <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[.12em] text-muted">{n.label}</div>
+                <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[.12em] text-secondary">{n.label}</div>
               </Reveal>
             ))}
           </div>

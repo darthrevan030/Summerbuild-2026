@@ -110,7 +110,7 @@ export function HowItWorksScroll() {
               <StepBadge n={s.n} active />
               <h3 className="mt-4 font-ui text-[16px] font-semibold text-primary">{s.title}</h3>
               <p className="mt-2 font-ui text-[13.5px] leading-relaxed text-secondary">{s.copy}</p>
-              <div aria-hidden className="mt-6 grid place-items-center">{MOCKS[i]}</div>
+              <div aria-hidden className="pointer-events-none mt-6 grid select-none place-items-center">{MOCKS[i]}</div>
             </div>
           ))}
         </div>
@@ -128,7 +128,7 @@ export function HowItWorksScroll() {
               {STEPS.map((s, i) => (
                 <li key={s.n} className="flex gap-4">
                   <StepBadge n={s.n} active={active === i} />
-                  <motion.div animate={{ opacity: active === i ? 1 : 0.4 }} transition={{ duration: 0.3 }}>
+                  <motion.div animate={{ opacity: active === i ? 1 : 0.62 }} transition={{ duration: 0.3 }}>
                     <h3 className="font-ui text-[17px] font-semibold text-primary">{s.title}</h3>
                     <p className="mt-1 max-w-[42ch] font-ui text-[13.5px] leading-relaxed text-secondary">{s.copy}</p>
                   </motion.div>
@@ -136,7 +136,7 @@ export function HowItWorksScroll() {
               ))}
             </ol>
           </div>
-          <div aria-hidden className="relative h-[340px] max-bp768:hidden">
+          <div aria-hidden className="pointer-events-none relative h-[340px] select-none max-bp768:hidden">
             {MOCKS.map((m, i) => <Layer key={i} p={scrollYProgress} index={i} count={MOCKS.length}>{m}</Layer>)}
           </div>
         </div>
