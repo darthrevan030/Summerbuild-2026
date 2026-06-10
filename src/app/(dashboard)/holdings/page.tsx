@@ -217,9 +217,11 @@ function DetailCard({ h, onClose }: { h: HoldingRow; onClose: () => void }) {
         )}
         <div className="dc-div" />
         <div className="math-row">
-          <span className="ui" style={{ color: "var(--gain)" }}>Asset gain</span>
-          <span className="mono" style={{ color: "var(--gain)" }}>
-            {d.ccy !== "SGD" ? `+${NF(assetGainNative, 0)} ${d.ccy} = ` : ""}
+          <span className="ui" style={{ color: h.assetGain >= 0 ? "var(--gain)" : "var(--loss)" }}>
+            Asset {h.assetGain >= 0 ? "gain" : "loss"}
+          </span>
+          <span className="mono" style={{ color: h.assetGain >= 0 ? "var(--gain)" : "var(--loss)" }}>
+            {d.ccy !== "SGD" ? `${assetGainNative < 0 ? "−" : "+"}${NF(assetGainNative, 0)} ${d.ccy} = ` : ""}
             {fmtSigned(h.assetGain)}
           </span>
         </div>
