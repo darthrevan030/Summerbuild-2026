@@ -7,7 +7,6 @@ import { TabBar } from "@/components/TabBar";
 import { SummaryRail } from "@/components/SummaryRail";
 import { TweaksPanel } from "@/components/TweaksPanel";
 import { PortfolioProvider } from "@/context/portfolio";
-import { ToastContainer } from "react-toastify";
 import type { HoldingRow } from "@/types/holding";
 import type {
   HeroStats,
@@ -77,7 +76,6 @@ export function DashboardShell({
           </main>
         </div>
         <TweaksPanel open={tweaksOpen} onClose={() => setTweaksOpen(false)} />
-        <ToastContainer position="bottom-right" autoClose={3500} theme="dark" newestOnTop />
       </div>
     </PortfolioProvider>
   );

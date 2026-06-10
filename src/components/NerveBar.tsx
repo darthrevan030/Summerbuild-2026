@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { Icon } from "@/components/Icon";
 import { useCountUp } from "@/lib/useCountUp";
 import { pct, CCY_SYMBOL } from "@/lib/formatters";

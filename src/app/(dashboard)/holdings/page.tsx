@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { usePortfolio } from "@/context/portfolio";
 import { Icon } from "@/components/Icon";
 import { Select } from "@/components/Select";

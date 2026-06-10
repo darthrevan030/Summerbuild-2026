@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { usePortfolio } from "@/context/portfolio";
 import { Icon } from "@/components/Icon";
 import { CCY_SYMBOL } from "@/lib/formatters";

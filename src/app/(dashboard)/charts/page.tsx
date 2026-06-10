@@ -9,7 +9,7 @@ import { FXArea } from "@/components/charts/FXArea";
 import { pct } from "@/lib/formatters";
 import { useDateRange, RANGES_DAILY } from "@/lib/useDateRange";
 import { useRouter } from "next/navigation";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 
 function RangeBar({
   ranges,

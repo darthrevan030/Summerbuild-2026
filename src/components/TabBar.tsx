@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { Icon } from "@/components/Icon";
 import { createClient } from "@/lib/supabase/client";
 import { refreshHoldingPrices } from "@/lib/api-client";

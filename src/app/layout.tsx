@@ -3,6 +3,7 @@ import { DM_Serif_Display, JetBrains_Mono, Sora } from "next/font/google";
 import "./globals.css";
 
 import { Analytics } from "@vercel/analytics/next";
+import { AppToaster } from "@/components/AppToaster";
 
 /* Runs before paint: stored choice wins, otherwise follow the OS.
    Dark is the class-absent default; .light is additive. */
@@ -59,7 +60,10 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <AppToaster />
+      </body>
       <Analytics />
     </html>
   );

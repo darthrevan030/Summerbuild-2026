@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { Select } from "@/components/Select";
 import { fetchFx } from "@/lib/api-client";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { useCurrencies } from "@/hooks/useCurrencies";
 import { useExchanges } from "@/hooks/useExchanges";
 

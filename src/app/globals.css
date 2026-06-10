@@ -244,11 +244,6 @@ html.light {
 @keyframes mmFadeIn{from{opacity:0;}to{opacity:1;}}
 @keyframes mmSlideIn{from{transform:translateX(-100%);}to{transform:translateX(0);}}
 
-/* react-toastify: match the terminal palette — DELETE with sonner migration */
-.Toastify__toast{background:var(--bg-elevated);border:1px solid var(--border-subtle);font-size:13px;font-weight:500;border-radius:10px;}
-.Toastify__toast--success{border-color:rgba(70,216,160,0.28);}
-.Toastify__toast--error{border-color:rgba(255,111,139,0.28);}
-
 /* tab bar */
 .tabbar{
   position:sticky;top:62px;z-index:40;display:flex;align-items:center;gap:6px;
