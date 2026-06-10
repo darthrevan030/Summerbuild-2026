@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Icon } from "@/components/Icon";
@@ -28,6 +29,7 @@ export function NerveBar({ hero, animate = true, onTweaksToggle, onHamburger }: 
   const [ccyOpen, setCcyOpen] = useState(false);
   const [dropPos, setDropPos] = useState<{ top: number; right: number } | null>(null);
   const ccyRef = useRef<HTMLDivElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
   const ccyBtnRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
   const dayUp = hero.dayChange >= 0;
@@ -35,9 +37,9 @@ export function NerveBar({ hero, animate = true, onTweaksToggle, onHamburger }: 
   useEffect(() => {
     if (!ccyOpen) return;
     function handleOutside(e: MouseEvent) {
-      if (ccyRef.current && !ccyRef.current.contains(e.target as Node)) {
-        setCcyOpen(false);
-      }
+      const inBtn = ccyRef.current?.contains(e.target as Node);
+      const inDrop = dropRef.current?.contains(e.target as Node);
+      if (!inBtn && !inDrop) setCcyOpen(false);
     }
     document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
@@ -106,8 +108,9 @@ export function NerveBar({ hero, animate = true, onTweaksToggle, onHamburger }: 
           >
             {CCY_SYMBOL[baseCurrency] ?? baseCurrency} {baseCurrency} ▾
           </button>
-          {ccyOpen && dropPos && (
+          {ccyOpen && dropPos && createPortal(
             <div
+              ref={dropRef}
               className="fixed z-[9999] flex min-w-[130px] flex-col gap-0.5 rounded-xl border border-subtle bg-surface p-1.5 shadow-[0_8px_32px_rgba(0,0,0,.5)] animate-fade-slide-in"
               style={{ top: dropPos.top, right: dropPos.right }}
             >
@@ -124,7 +127,8 @@ export function NerveBar({ hero, animate = true, onTweaksToggle, onHamburger }: 
                   <span className="font-ui">{c}</span>
                 </button>
               ))}
-            </div>
+            </div>,
+            document.body
           )}
         </div>
         <div className="font-mono text-xs tabular-nums text-muted max-bp768:hidden">{hero.updated}</div>
