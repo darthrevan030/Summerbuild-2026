@@ -37,9 +37,9 @@ export async function POST() {
 
   const [livePrices, liveFxRates, cryptoSparks, equitySparks] = await Promise.all([
     fetchLivePrices(tickers, tickerCurrency, providers),
-    providers.frankfurter ? fetchLiveFxRates() : Promise.resolve({}),
-    providers.coingecko ? fetchCryptoSparks(tickers) : Promise.resolve({}),
-    providers.finnhub ? fetchEquitySparks(tickers, tickerCurrency) : Promise.resolve({}),
+    providers.frankfurter ? fetchLiveFxRates() : Promise.resolve({} as Record<string, number>),
+    providers.coingecko ? fetchCryptoSparks(tickers) : Promise.resolve({} as Record<string, number[]>),
+    providers.finnhub ? fetchEquitySparks(tickers, tickerCurrency) : Promise.resolve({} as Record<string, number[]>),
   ]);
 
   await Promise.all(
