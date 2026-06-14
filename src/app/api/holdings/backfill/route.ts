@@ -111,7 +111,7 @@ export async function POST() {
     providers.eodhd
       ? Promise.all(equityTickers.map(async (t) => [t, await fetchEohdHistory(normalizeEohdTicker(t), from, today)] as const)).then(Object.fromEntries)
       : Promise.resolve(Object.fromEntries(equityTickers.map((t) => [t, {}]))),
-    providers.frankfurter ? fetchFxHistory(currencies, from, today) : Promise.resolve({}),
+    providers.frankfurter ? fetchFxHistory(currencies, from, today) : Promise.resolve({} as Record<string, Record<string, number>>),
   ]);
 
   // Build fill-forward price maps per ticker
