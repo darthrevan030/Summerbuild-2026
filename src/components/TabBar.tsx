@@ -111,7 +111,7 @@ export function TabBar({ mobileOpen = false, onMobileClose, onTweaksToggle }: Ta
         <div className="fixed inset-0 z-[300] bg-black/65 backdrop-blur-[4px] animate-mm-fade" onClick={onMobileClose}>
           <div className="absolute inset-y-0 left-0 flex w-[72%] max-w-72 flex-col border-r border-subtle bg-surface animate-mm-slide" onClick={(e) => e.stopPropagation()}>
             <div className="flex shrink-0 items-center justify-between border-b border-subtle px-[18px] pb-4 pt-[18px]">
-              <span className="font-serif text-[17px] tracking-[.3px] text-gold">{displayName ? `${displayName}'s Portfolio` : "Portfolio"}</span>
+              <span className="font-serif text-[17px] tracking-[.3px] text-gold">Vantage</span>
               <button className={ICON_BTN} onClick={onMobileClose} title="Close">
                 <Icon name="x" size={16} />
               </button>

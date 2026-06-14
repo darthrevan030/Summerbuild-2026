@@ -2,16 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { applyAccent } from "@/lib/hexA";
 import { SPRING_SNAPPY } from "@/components/landing/motion-config";
 
 interface TweakState {
-  accent: string;
   lightMode: boolean;
 }
-
-const DARK_ACCENT = "#b79cff";
-const LIGHT_ACCENT = "#6b4bd6";
 
 /* Matches max-bp600 (width < 600px): the panel becomes a bottom sheet there */
 const MOBILE_MQ = "(max-width: 599.98px)";
@@ -45,9 +40,9 @@ export function TweaksPanel({ open, onClose }: { open: boolean; onClose: () => v
   // Initialise from the DOM: the root layout's theme script may have added
   // .light before this mounts — defaults here must mirror it, not stomp it.
   const [tw, setTw] = useState<TweakState>(() => {
-    if (typeof document === "undefined") return { accent: DARK_ACCENT, lightMode: false };
+    if (typeof document === "undefined") return { lightMode: false };
     const light = document.documentElement.classList.contains("light");
-    return { accent: light ? LIGHT_ACCENT : DARK_ACCENT, lightMode: light };
+    return { lightMode: light };
   });
   const dragRef = useRef<HTMLDivElement>(null);
   const offsetRef = useRef({ x: 16, y: 16 });
@@ -57,14 +52,8 @@ export function TweaksPanel({ open, onClose }: { open: boolean; onClose: () => v
     setTw((prev) => ({ ...prev, [key]: val }));
   };
 
-  useEffect(() => { applyAccent(tw.accent); }, [tw.accent]);
   useEffect(() => {
     document.documentElement.classList.toggle("light", tw.lightMode);
-    // Sync the default accent to the active theme on toggle.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (tw.lightMode && tw.accent === DARK_ACCENT) setTweak("accent", LIGHT_ACCENT);
-    if (!tw.lightMode && tw.accent === LIGHT_ACCENT) setTweak("accent", DARK_ACCENT);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tw.lightMode]);
 
   const clamp = useCallback(() => {
@@ -115,7 +104,7 @@ export function TweaksPanel({ open, onClose }: { open: boolean; onClose: () => v
     <div
       ref={dragRef}
       className={
-        "fixed right-4 bottom-4 z-[2147483646] flex w-60 max-h-[calc(100vh-32px)] flex-col " +
+        "fixed right-4 bottom-4 z-[2147483646] flex w-48 max-h-[calc(100vh-32px)] flex-col " +
         "rounded-[14px] border-[0.5px] border-white/60 bg-[rgba(250,249,247,.92)] text-[#29261b] " +
         "shadow-[0_1px_0_rgba(255,255,255,.5)_inset,0_12px_40px_rgba(0,0,0,.18)] " +
         "backdrop-blur-[24px] backdrop-saturate-[1.6] font-sans text-[11.5px] leading-[1.4] " +
@@ -143,25 +132,6 @@ export function TweaksPanel({ open, onClose }: { open: boolean; onClose: () => v
             try { localStorage.setItem("theme", v ? "light" : "dark"); } catch {}
           }}
         />
-        <div>
-          <div className="mb-1.5 text-xs font-medium text-[rgba(41,38,27,.72)]">Accent colour</div>
-          <label className="flex cursor-pointer items-center gap-2.5">
-            <div
-              className="relative size-8 shrink-0 overflow-hidden rounded-lg border-[0.5px] border-black/[.18] shadow-[0_2px_6px_rgba(0,0,0,.12)]"
-              style={{ background: tw.accent }}
-            >
-              <input
-                type="color"
-                value={tw.accent}
-                onChange={(e) => setTweak("accent", e.target.value)}
-                className="absolute -inset-1 h-[calc(100%+8px)] w-[calc(100%+8px)] cursor-pointer border-none p-0 opacity-0"
-              />
-            </div>
-            <span className="font-mono text-xs tracking-[.04em] text-[rgba(41,38,27,.6)]">
-              {tw.accent.toUpperCase()}
-            </span>
-          </label>
-        </div>
       </div>
     </div>
   );

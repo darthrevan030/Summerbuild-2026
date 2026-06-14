@@ -71,7 +71,7 @@ export function LiveTerminal() {
             <i className="size-2.5 rounded-full border border-subtle bg-elevated" />
           </div>
           <div className="absolute left-1/2 -translate-x-1/2 rounded-md border border-subtle bg-elevated px-3 py-1 font-mono text-[10px] tracking-[.06em] text-muted">
-            portfolio / overview
+            vantage / overview
           </div>
         </div>
 

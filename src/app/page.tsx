@@ -1,22 +1,19 @@
 import type { Metadata } from "next";
 import { Icon } from "@/components/Icon";
-import { AuroraField } from "@/components/landing/AuroraField";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { Reveal } from "@/components/landing/Reveal";
-import { KineticHeadline } from "@/components/landing/KineticHeadline";
 import { HeroFxSplit } from "@/components/landing/HeroFxSplit";
 import { LiveTerminal } from "@/components/landing/LiveTerminal";
 import { SpotlightCard } from "@/components/landing/SpotlightCard";
 import { CountUp } from "@/components/landing/CountUp";
 import { HowItWorksScroll } from "@/components/landing/HowItWorksScroll";
-import { MagneticButton } from "@/components/landing/MagneticButton";
 
 export const metadata: Metadata = {
-  title: "Portfolio — Personal Wealth Terminal",
+  title: "Vantage — Personal Wealth Terminal",
   description:
-    "Track stocks, ETFs, crypto, gold and property across 32 global exchanges. Live prices, FX-aware P&L, charts and AI analysis — with your data in your own database.",
+    "Track stocks, ETFs, crypto, gold and property across 30 global exchanges — live prices, FX-aware P&L and AI analysis. Your data stays in your own database.",
   openGraph: {
-    title: "Portfolio — Personal Wealth Terminal",
+    title: "Vantage — Personal Wealth Terminal",
     description: "Every holding. Every currency. One terminal.",
     type: "website",
   },
@@ -24,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 const CTA_PILL =
-  "rounded-full bg-gold px-7 py-3.5 font-ui text-[14px] font-semibold text-[#15130c] transition-[filter] hover:brightness-110";
+  "rounded-[3px] bg-gold px-7 py-3.5 font-ui text-[14px] font-semibold text-[#15130c] transition-[filter] hover:brightness-110";
 const CTA_GHOST =
   "rounded-full border border-subtle px-7 py-3.5 font-ui text-[14px] font-medium text-secondary transition-colors hover:border-gold-soft hover:text-primary";
 
@@ -56,7 +53,7 @@ const FEATURES: {
 ];
 
 const NUMBERS = [
-  { value: 32, label: "Global exchanges", suffix: "" },
+  { value: 30, label: "Global exchanges", suffix: "" },
   { value: 8, label: "Base currencies", suffix: "" },
   { value: 6, label: "Asset classes", suffix: "" },
   { value: 100, label: "Your own data", suffix: "%" },
@@ -69,45 +66,58 @@ export default function LandingPage() {
         <style>{`[data-reveal]{opacity:1!important;transform:none!important}`}</style>
       </noscript>
 
-      <AuroraField />
       <LandingNav />
 
       <main>
         {/* ───────────────────────────── hero ───────────────────────────── */}
-        <section className="mx-auto max-w-[1140px] px-6 pb-20 pt-36 text-center md:pt-44">
-          <Reveal>
-            <div className="text-[11px] font-semibold uppercase tracking-[.16em] text-gold">
-              Personal wealth terminal
+        <section className="mx-auto max-w-[1140px] px-6 pb-20 pt-36 md:pt-44">
+          <div className="flex flex-col items-center text-center lg:flex-row lg:items-start lg:gap-16 lg:text-left">
+
+            {/* Left column — copy */}
+            <div className="lg:flex-1 lg:pt-4">
+              <Reveal>
+                <div className="text-[11px] font-semibold uppercase tracking-[.16em] text-gold">
+                  Personal wealth terminal
+                </div>
+              </Reveal>
+
+              <h1 className="mx-auto mt-5 max-w-[860px] font-serif text-[clamp(46px,7.5vw,92px)] leading-[1.04] tracking-[-0.015em] text-primary">
+                Every holding. Every currency.{" "}
+                <em className="italic text-gold">One</em> terminal.
+              </h1>
+
+              <Reveal delay={120}>
+                <p className="mx-auto mt-7 max-w-[52ch] font-ui text-[17px] leading-[1.65] text-secondary lg:mx-0">
+                  Track stocks, ETFs, crypto, gold and property across 30 global
+                  exchanges — live prices, FX-aware P&amp;L and AI analysis. Your
+                  data stays in your own database.
+                </p>
+              </Reveal>
+
+              <Reveal delay={200}>
+                <div className="mt-10 flex flex-wrap items-center justify-center gap-3.5 lg:justify-start">
+                  <a href="/login" className={CTA_PILL}>Get Started</a>
+                  <a href="#fxsplit" className={CTA_GHOST}>See what&rsquo;s inside&ensp;↓</a>
+                </div>
+              </Reveal>
+
+              {/* HeroFxSplit stays here, below the CTAs on desktop */}
+              <div id="fxsplit" className="mt-16 scroll-mt-24">
+                <HeroFxSplit />
+              </div>
             </div>
-          </Reveal>
 
-          <KineticHeadline
-            text="Every holding. Every currency. *One* terminal."
-            className="mx-auto mt-5 max-w-[860px] font-serif text-[clamp(46px,7.5vw,92px)] leading-[1.04] tracking-[-0.015em] text-primary"
-          />
-
-          <Reveal delay={120}>
-            <p className="mx-auto mt-7 max-w-[52ch] font-ui text-[17px] leading-[1.65] text-secondary">
-              Track stocks, ETFs, crypto, gold and property across 32 global
-              exchanges — live prices, FX-aware P&amp;L and AI analysis. Your
-              data stays in your own database.
-            </p>
-          </Reveal>
-
-          <Reveal delay={200}>
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-3.5">
-              <MagneticButton href="/login" className={CTA_PILL}>Get Started</MagneticButton>
-              <a href="#fxsplit" className={CTA_GHOST}>See what&rsquo;s inside&ensp;↓</a>
+            {/* Right column — LiveTerminal, desktop only */}
+            <div className="mt-16 hidden w-[480px] shrink-0 lg:mt-0 lg:block">
+              <Reveal>
+                <LiveTerminal />
+              </Reveal>
             </div>
-          </Reveal>
 
-          {/* signature interactive centerpiece */}
-          <div id="fxsplit" className="mt-20 scroll-mt-24">
-            <HeroFxSplit />
           </div>
 
-          {/* live product preview */}
-          <div className="relative mt-20 md:mt-24">
+          {/* LiveTerminal visible on mobile/tablet below the fold */}
+          <div className="relative mt-16 lg:hidden">
             <Reveal>
               <LiveTerminal />
             </Reveal>
@@ -192,7 +202,7 @@ export default function LandingPage() {
               Your whole portfolio, finally in <span className="italic text-gold">focus</span>.
             </h2>
             <div className="mt-10 flex justify-center">
-              <MagneticButton href="/login" className={CTA_PILL}>Start tracking&ensp;→</MagneticButton>
+              <a href="/login" className={CTA_PILL}>Start tracking&ensp;→</a>
             </div>
           </Reveal>
         </section>
@@ -202,12 +212,12 @@ export default function LandingPage() {
       <footer className="border-t border-subtle">
         <div className="mx-auto flex max-w-[1140px] flex-wrap items-center justify-between gap-6 px-6 py-12">
           <div>
-            <div className="font-serif text-[18px] text-gold [text-shadow:0_0_18px_var(--accent-glow)]">Portfolio</div>
+            <div className="font-serif text-[18px] text-gold [text-shadow:0_0_18px_var(--accent-glow)]">Vantage</div>
             <div className="mt-1.5 font-ui text-[11.5px] text-muted">Personal finance dashboard — data stays private</div>
           </div>
           <div className="flex items-center gap-6 font-ui text-[12px] text-secondary">
             <a href="/login" className="transition-colors hover:text-primary">Sign in</a>
-            <span className="text-muted">© 2026 Portfolio</span>
+            <span className="text-muted">© 2026 Vantage</span>
           </div>
         </div>
       </footer>

@@ -6,56 +6,55 @@
    by the html.light class. Names are frozen: inline styles across the
    app reference them directly, and @theme inline maps them below.
    ================================================================ */
-:root{
-  /* obsidian aurora — cool near-black with a violet undertone */
-  --bg-base:#0a0912;
-  --bg-surface:#110f1c;
-  --bg-elevated:#1a1730;
-  --border-subtle:rgba(186,170,255,0.09);
-  --border-gold:rgba(178,150,255,0.34);
-  --gold:#b79cff;          /* accent (iris violet) — name kept for compat */
-  --gold-dim:#8b73d6;
-  --accent-wash:rgba(183,156,255,0.10);
-  --accent-tint:rgba(183,156,255,0.16);
-  --accent-glow:rgba(150,110,255,0.22);
-  --gain:#46d8a0;
-  --loss:#ff6f8b;
-  --fx-positive:#6fb0ff;
-  --fx-negative:#e58ad0;
-  --text-primary:#ecebf4;
-  --text-secondary:#9b96b4;
-  --text-muted:#5c5878;
-  --serif:var(--font-serif),"DM Serif Display",Georgia,serif;
-  --mono:var(--font-mono),"JetBrains Mono",ui-monospace,monospace;
-  --ui:var(--font-ui),"Sora",system-ui,sans-serif;
-  --card-shadow:0 1px 0 rgba(255,255,255,0.03) inset, 0 18px 40px -24px rgba(0,0,0,0.8);
-  --r-card:16px;
-  --donut-track:rgba(255,255,255,0.04);
-  --pulse-c:rgba(52,211,153,.45);
+:root {
+  --bg-base:       #0E0C0A;
+  --bg-surface:    #161410;
+  --bg-elevated:   #201E19;
+  --border-subtle: rgba(245,225,175,0.07);
+  --border-gold:   rgba(200,149,42,0.32);
+  --gold:          #C8952A;
+  --gold-dim:      #A07828;
+  --accent-wash:   rgba(200,149,42,0.08);
+  --accent-tint:   rgba(200,149,42,0.14);
+  --accent-glow:   rgba(200,149,42,0.18);
+  --gain:          #3DAF78;
+  --loss:          #D43F3F;
+  --fx-positive:   #C8952A;
+  --fx-negative:   #D43F3F;
+  --text-primary:  #F5EDD8;
+  --text-secondary:#9B9080;
+  --text-muted:    #5C5448;
+  --serif:         var(--font-serif),"DM Serif Display",Georgia,serif;
+  --mono:          var(--font-mono),"JetBrains Mono",ui-monospace,monospace;
+  --ui:            var(--font-ui),"Sora",system-ui,sans-serif;
+  --card-shadow:   0 1px 0 rgba(255,255,255,0.02) inset, 0 18px 40px -24px rgba(0,0,0,0.8);
+  --r-card:        16px;
+  --donut-track:   rgba(255,255,255,0.04);
+  --pulse-c:       rgba(61,175,120,0.45);
 }
 
 /* LIGHT MODE tokens — toggled via html.light */
 html.light {
-  --bg-base:       #eceaf4;
-  --bg-surface:    #f8f7fc;
-  --bg-elevated:   #e5e2f1;
-  --border-subtle: rgba(40,30,80,0.10);
-  --border-gold:   rgba(107,75,214,0.40);
-  --gold:          #6b4bd6;
-  --gold-dim:      #5a3cc0;
-  --accent-wash:   rgba(107,75,214,0.10);
-  --accent-tint:   rgba(107,75,214,0.15);
-  --accent-glow:   rgba(107,75,214,0.16);
-  --gain:          #0f8f5f;
-  --loss:          #cf3a55;
-  --fx-positive:   #2563c9;
-  --fx-negative:   #b8458f;
-  --text-primary:  #1b1730;
-  --text-secondary:#5b5676;
-  --text-muted:    #928db0;
+  --bg-base:       #F5F0E8;
+  --bg-surface:    #FDFAF4;
+  --bg-elevated:   #EDE8DC;
+  --border-subtle: rgba(80,60,20,0.10);
+  --border-gold:   rgba(160,110,20,0.38);
+  --gold:          #A07220;
+  --gold-dim:      #7A5818;
+  --accent-wash:   rgba(160,114,32,0.09);
+  --accent-tint:   rgba(160,114,32,0.15);
+  --accent-glow:   rgba(160,114,32,0.14);
+  --gain:          #1A8C52;
+  --loss:          #B83030;
+  --fx-positive:   #A07220;
+  --fx-negative:   #B83030;
+  --text-primary:  #1C1710;
+  --text-secondary:#6B6050;
+  --text-muted:    #A09080;
   --card-shadow:   0 1px 3px rgba(0,0,0,0.06);
   --donut-track:   rgba(0,0,0,0.06);
-  --pulse-c:       rgba(28,122,82,0.45);
+  --pulse-c:       rgba(26,140,82,0.45);
 }
 
 /* ================================================================
@@ -175,15 +174,23 @@ html.light {
     font-family:var(--ui);font-weight:400;-webkit-font-smoothing:antialiased;
     font-size:14px;line-height:1.45;
   }
-  /* aurora — soft accent light bleeding from the top, behind everything */
-  body::after{
-    content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
-    background:
-      radial-gradient(120% 78% at 50% -16%, var(--accent-glow) 0%, transparent 56%),
-      radial-gradient(80% 60% at 88% 4%, rgba(111,176,255,0.10) 0%, transparent 60%),
-      radial-gradient(70% 60% at 6% 0%, rgba(229,138,208,0.07) 0%, transparent 62%);
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(200,149,42,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,149,42,0.035) 1px, transparent 1px);
+    background-size: 40px 40px;
   }
-  html.light body::after{opacity:.55;}
+  html.light body::after {
+    background-image:
+      linear-gradient(rgba(160,114,32,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(160,114,32,0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
   /* grain */
   body::before{
     content:"";position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:.42;

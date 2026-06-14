@@ -65,7 +65,7 @@ export default function LoginPage() {
             textShadow: "0 0 32px var(--accent-glow)",
             lineHeight: 1,
           }}>
-            Portfolio
+            Vantage
           </div>
           <div style={{
             fontSize: "9px",
@@ -143,7 +143,7 @@ export default function LoginPage() {
                   Sign in
                 </div>
                 <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
-                  Access your portfolio dashboard
+                  Personal wealth terminal
                 </div>
               </div>
 

@@ -26,8 +26,8 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "Portfolio — Personal Wealth Terminal",
-  description: "Personal finance dashboard and portfolio tracker",
+  title: "Vantage — Personal Wealth Terminal",
+  description: "Track stocks, ETFs, crypto, gold and property across 30 global exchanges. Live prices, FX-aware P&L and AI analysis. Your data stays in your own database.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
@@ -38,8 +38,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   /* Follows the OS, not the stored override — browser-chrome cosmetic only */
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#eceaf4" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0912" },
+    { media: "(prefers-color-scheme: light)", color: "#F5F0E8" },
+    { media: "(prefers-color-scheme: dark)", color: "#0E0C0A" },
   ],
 };
 
