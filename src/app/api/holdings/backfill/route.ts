@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/guards";
 import { fetchHoldings, fetchSnapshots } from "@/lib/supabase/data";
+import { getProviderFlags } from "@/lib/supabase/app-config";
 
 export const maxDuration = 60;
 
@@ -103,10 +104,14 @@ export async function POST() {
   )];
   const currencies = [...new Set(holdings.map((h) => h.currency).filter((c) => c !== "SGD"))];
 
+  const providers = await getProviderFlags();
+
   // Fetch all historical prices in parallel (one call per ticker)
   const [rawPrices, rawFx] = await Promise.all([
-    Promise.all(equityTickers.map(async (t) => [t, await fetchEohdHistory(normalizeEohdTicker(t), from, today)] as const)).then(Object.fromEntries),
-    fetchFxHistory(currencies, from, today),
+    providers.eodhd
+      ? Promise.all(equityTickers.map(async (t) => [t, await fetchEohdHistory(normalizeEohdTicker(t), from, today)] as const)).then(Object.fromEntries)
+      : Promise.resolve(Object.fromEntries(equityTickers.map((t) => [t, {}]))),
+    providers.frankfurter ? fetchFxHistory(currencies, from, today) : Promise.resolve({}),
   ]);
 
   // Build fill-forward price maps per ticker

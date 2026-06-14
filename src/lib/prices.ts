@@ -1,3 +1,7 @@
+import YahooFinanceClass from "yahoo-finance2";
+// v3: default export is the class, not an instance
+const yahooFinance = new YahooFinanceClass();
+
 const CRYPTO_IDS: Record<string, string> = {
   BTC: "bitcoin", ETH: "ethereum", BNB: "binancecoin",
   SOL: "solana", XRP: "ripple", ADA: "cardano", DOGE: "dogecoin",
@@ -133,13 +137,22 @@ export async function fetchCryptoSparks(
   return results;
 }
 
+export interface PriceProviders {
+  eodhd?:     boolean;
+  yahoo?:     boolean;
+  coingecko?: boolean;
+  goldapi?:   boolean;
+}
+
 /**
  * Fetches live prices for all tickers.
  * tickerCurrency maps ticker → holding currency so the correct exchange is used.
+ * providers lets callers disable individual data sources (e.g. to preserve daily quotas during testing).
  */
 export async function fetchLivePrices(
   tickers: string[],
-  tickerCurrency: Record<string, string> = {}
+  tickerCurrency: Record<string, string> = {},
+  providers: PriceProviders = {}
 ): Promise<Record<string, number>> {
   const prices: Record<string, number> = {};
   if (tickers.length === 0) return prices;
@@ -149,7 +162,7 @@ export async function fetchLivePrices(
   const equities = tickers.filter((t) => !CRYPTO_IDS[t] && !GOLD_TICKERS.has(t));
 
   await Promise.all([
-    crypto.length > 0 && (async () => {
+    crypto.length > 0 && (providers.coingecko ?? true) && (async () => {
       const ids = crypto.map((t) => CRYPTO_IDS[t]).join(",");
       const res = await fetch(
         `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`
@@ -163,7 +176,7 @@ export async function fetchLivePrices(
       }
     })(),
 
-    gold.length > 0 && process.env.GOLDAPI_KEY && (async () => {
+    gold.length > 0 && (providers.goldapi ?? true) && process.env.GOLDAPI_KEY && (async () => {
       const res = await fetch("https://www.goldapi.io/api/XAU/USD", {
         headers: { "x-access-token": process.env.GOLDAPI_KEY! },
       });
@@ -173,7 +186,7 @@ export async function fetchLivePrices(
       }
     })(),
 
-    equities.length > 0 && process.env.EODHD_API_KEY && (async () => {
+    equities.length > 0 && (providers.eodhd ?? true) && process.env.EODHD_API_KEY && (async () => {
       // Build symbol → original ticker reverse map, then do one bulk call instead of N
       const symbolToTicker: Record<string, string> = {};
       const symbols = equities.map((ticker) => {
@@ -212,11 +225,9 @@ export async function fetchLivePrices(
     })(),
   ]);
 
-  // Yahoo Finance fallback — free, no key, covers all 14 supported exchanges.
-  // Runs after EODHD so it only fills gaps (exchanges EODHD doesn't price).
-  // Uses v8 API with crumb auth (v7 now returns 401 without cookie+crumb).
+  // Yahoo Finance fallback via yahoo-finance2 (handles crumb/auth internally).
   const unpriced = equities.filter((t) => prices[t] === undefined);
-  if (unpriced.length > 0) {
+  if (unpriced.length > 0 && (providers.yahoo ?? true)) {
     const yahooSymbolToTicker: Record<string, string> = {};
     const yahooSymbols: string[] = [];
     for (const ticker of unpriced) {
@@ -224,40 +235,14 @@ export async function fetchLivePrices(
       yahooSymbolToTicker[sym] = ticker;
       yahooSymbols.push(sym);
     }
-    const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
     try {
-      // Step 1: acquire Yahoo session cookie from fc.yahoo.com (consent endpoint)
-      const cookieRes = await fetch("https://fc.yahoo.com/", {
-        headers: { "User-Agent": UA, "Accept": "text/html,*/*" },
-      });
-      type HeadersWithCookies = Headers & { getSetCookie?: () => string[] };
-      const rawCookies = (cookieRes.headers as HeadersWithCookies).getSetCookie?.() ?? [];
-      const cookie = rawCookies.map((c) => c.split(";")[0]).join("; ");
-
-      // Step 2: exchange cookie for a crumb token
-      const crumbRes = await fetch("https://query1.finance.yahoo.com/v1/test/getcrumb", {
-        headers: { "User-Agent": UA, "Cookie": cookie },
-      });
-      const crumb = crumbRes.ok ? (await crumbRes.text()).trim() : "";
-
-      // Step 3: bulk quote via v8 (crumb required) or v7 fallback
-      const url = crumb && crumb !== "NA"
-        ? `https://query2.finance.yahoo.com/v8/finance/quote?formatted=false&crumb=${encodeURIComponent(crumb)}&symbols=${yahooSymbols.join(",")}`
-        : `https://query2.finance.yahoo.com/v7/finance/quote?symbols=${yahooSymbols.join(",")}`;
-
-      const res = await fetch(url, {
-        headers: { "User-Agent": UA, "Cookie": cookie, "Accept": "application/json" },
-      });
-      if (res.ok) {
-        const json = await res.json();
-        for (const q of (json?.quoteResponse?.result ?? []) as { symbol: string; regularMarketPrice: number }[]) {
-          const ticker = yahooSymbolToTicker[q.symbol];
-          if (ticker && typeof q.regularMarketPrice === "number" && q.regularMarketPrice > 0) {
-            prices[ticker] = q.regularMarketPrice;
-          }
+      const results = await yahooFinance.quote(yahooSymbols, {}, { validateResult: false });
+      const arr = Array.isArray(results) ? results : [results];
+      for (const q of arr) {
+        const ticker = yahooSymbolToTicker[q.symbol];
+        if (ticker && typeof q.regularMarketPrice === "number" && q.regularMarketPrice > 0) {
+          prices[ticker] = q.regularMarketPrice;
         }
-      } else {
-        console.warn("[fetchLivePrices] Yahoo non-ok:", res.status, "crumb:", !!crumb, yahooSymbols);
       }
     } catch (e) {
       console.warn("[fetchLivePrices] Yahoo error:", e);

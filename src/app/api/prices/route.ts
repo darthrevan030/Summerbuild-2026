@@ -1,5 +1,6 @@
 import { fetchLivePrices } from "@/lib/prices";
 import { requireAuth } from "@/lib/supabase/guards";
+import { getProviderFlags } from "@/lib/supabase/app-config";
 
 const MAX_TICKERS = 50;
 const TICKER_RE = /^[A-Za-z0-9.\-:]{1,20}$/;
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "invalid ticker format" }, { status: 400 });
   }
 
-  const prices = await fetchLivePrices(tickers);
+  const providers = await getProviderFlags();
+  const prices = await fetchLivePrices(tickers, {}, providers);
   return Response.json(prices);
 }

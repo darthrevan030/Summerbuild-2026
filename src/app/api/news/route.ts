@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/supabase/guards";
 import { enforceRateLimit } from "@/lib/supabase/rate-limit";
+import { getProviderFlags } from "@/lib/supabase/app-config";
 
 const POS = /\b(surge|beat|record|gain|rise|profit|growth|upgrade|strong|soar|exceed|higher|boost|rally|outperform|rebound)\b/i;
 const NEG = /\b(fall|miss|cut|loss|drop|plunge|downgrade|weak|decline|warn|disappoint|tumble|slide|concern|risk|below|slump)\b/i;
@@ -51,6 +52,9 @@ export async function GET(req: NextRequest) {
 
   const limited = await enforceRateLimit("news", 30, 60);
   if (limited) return limited;
+
+  const { finnhub: enabled } = await getProviderFlags();
+  if (!enabled) return Response.json([]);
 
   const symbol = req.nextUrl.searchParams.get("symbol");
   if (!symbol) return Response.json({ error: "symbol required" }, { status: 400 });

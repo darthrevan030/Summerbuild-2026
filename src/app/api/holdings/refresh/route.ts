@@ -2,6 +2,7 @@ import { fetchHoldings, updateHoldingPrice, recordSnapshot } from "@/lib/supabas
 import { fetchLivePrices, fetchLiveFxRates, fetchCryptoSparks, fetchEquitySparks } from "@/lib/prices";
 import { requireAuth } from "@/lib/supabase/guards";
 import { enforceRateLimit } from "@/lib/supabase/rate-limit";
+import { getProviderFlags } from "@/lib/supabase/app-config";
 
 const STALE_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -32,11 +33,13 @@ export async function POST() {
     stale.filter((h) => h.ticker !== "—").map((h) => [h.ticker, h.currency])
   );
 
+  const providers = await getProviderFlags();
+
   const [livePrices, liveFxRates, cryptoSparks, equitySparks] = await Promise.all([
-    fetchLivePrices(tickers, tickerCurrency),
-    fetchLiveFxRates(),
-    fetchCryptoSparks(tickers),
-    fetchEquitySparks(tickers, tickerCurrency),
+    fetchLivePrices(tickers, tickerCurrency, providers),
+    providers.frankfurter ? fetchLiveFxRates() : Promise.resolve({}),
+    providers.coingecko ? fetchCryptoSparks(tickers) : Promise.resolve({}),
+    providers.finnhub ? fetchEquitySparks(tickers, tickerCurrency) : Promise.resolve({}),
   ]);
 
   await Promise.all(

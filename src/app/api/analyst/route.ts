@@ -2,6 +2,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { requireAuth } from "@/lib/supabase/guards";
 import { enforceRateLimit } from "@/lib/supabase/rate-limit";
+import { getProviderFlags } from "@/lib/supabase/app-config";
 
 export const dynamic = "force-dynamic";
 
@@ -122,6 +123,9 @@ export async function POST(req: Request) {
 
   const limited = await enforceRateLimit("analyst", 10, 60, { failClosed: true });
   if (limited) return limited;
+
+  const { anthropic: enabled } = await getProviderFlags();
+  if (!enabled) return Response.json({ error: "Analyst AI is currently disabled" }, { status: 503 });
 
   const raw = await req.json().catch(() => null);
   const parsed = parseBody(raw);

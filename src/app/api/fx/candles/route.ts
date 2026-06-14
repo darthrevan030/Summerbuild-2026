@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/supabase/guards";
+import { getProviderFlags } from "@/lib/supabase/app-config";
 
 const REVALIDATE_SECONDS = 3600;
 const CCY_RE = /^[A-Z]{3}$/;
@@ -18,6 +19,9 @@ export async function GET(req: NextRequest) {
   if (!CCY_RE.test(base)) {
     return Response.json({ error: "invalid base currency" }, { status: 400 });
   }
+
+  const { finnhub: enabled } = await getProviderFlags();
+  if (!enabled) return Response.json({ closes: [] });
 
   const key = process.env.FINNHUB_API_KEY;
   // Soft fail — FX sparklines are an enhancement, not critical
