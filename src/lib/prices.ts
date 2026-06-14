@@ -3,8 +3,13 @@ import YahooFinanceClass from "yahoo-finance2";
 const yahooFinance = new YahooFinanceClass();
 
 const CRYPTO_IDS: Record<string, string> = {
-  BTC: "bitcoin", ETH: "ethereum", BNB: "binancecoin",
-  SOL: "solana", XRP: "ripple", ADA: "cardano", DOGE: "dogecoin",
+  BTC: "bitcoin",
+  ETH: "ethereum",
+  BNB: "binancecoin",
+  SOL: "solana",
+  XRP: "ripple",
+  ADA: "cardano",
+  DOGE: "dogecoin",
 };
 const GOLD_TICKERS = new Set(["GOLD", "XAU", "GLD"]);
 
@@ -16,9 +21,9 @@ const EODHD_EXCHANGE: Record<string, string> = {
   EUR: "XETRA",
   JPY: "TSE",
   INR: "NSE",
-  HKD: "HK",   // EODHD uses HK, not HKEX
-  SGD: "SI",   // EODHD uses SI, not SG
-  AUD: "AU",   // EODHD uses AU, not ASX
+  HKD: "HK", // EODHD uses HK, not HKEX
+  SGD: "SI", // EODHD uses SI, not SG
+  AUD: "AU", // EODHD uses AU, not ASX
   CNY: "SHG",
   CNH: "SHG",
 };
@@ -26,10 +31,10 @@ const EODHD_EXCHANGE: Record<string, string> = {
 // Remap old/incorrect app exchange codes → correct EODHD codes
 // Handles DB entries written before codes were corrected
 const EODHD_CODE_REMAP: Record<string, string> = {
-  SG:   "SI",   // SGX Singapore (old app code → EODHD)
-  HKEX: "HK",  // Hong Kong Exchange
-  ASX:  "AU",  // Australian Securities Exchange
-  MI:   "MI",  // Borsa Italiana — keep as-is, EODHD may support
+  SG: "SI", // SGX Singapore (old app code → EODHD)
+  HKEX: "HK", // Hong Kong Exchange
+  ASX: "AU", // Australian Securities Exchange
+  MI: "MI", // Borsa Italiana — keep as-is, EODHD may support
 };
 
 // Finnhub uses "EXCHANGE:TICKER" for non-US. US stocks use bare ticker.
@@ -48,21 +53,21 @@ const FINNHUB_PREFIX: Record<string, string> = {
 // Yahoo Finance suffixes by app exchange code (app ticker suffix or EODHD_CODE_REMAP output).
 // US stocks use no suffix. Covers all 14 exchanges the app supports.
 const YAHOO_SUFFIX: Record<string, string> = {
-  US:    "",
-  LSE:   ".L",
+  US: "",
+  LSE: ".L",
   XETRA: ".DE",
-  TSE:   ".T",
-  NSE:   ".NS",
-  BSE:   ".BO",
-  HK:    ".HK",
-  HKEX:  ".HK",
-  SI:    ".SI",  // SGX — EODHD remaps SG→SI; Yahoo also uses .SI
-  SG:    ".SI",
-  AU:    ".AX",  // ASX — EODHD remaps ASX→AU; Yahoo uses .AX
-  ASX:   ".AX",
-  SHG:   ".SS",
-  SHE:   ".SZ",
-  MI:    ".MI",
+  TSE: ".T",
+  NSE: ".NS",
+  BSE: ".BO",
+  HK: ".HK",
+  HKEX: ".HK",
+  SI: ".SI", // SGX — EODHD remaps SG→SI; Yahoo also uses .SI
+  SG: ".SI",
+  AU: ".AX", // ASX — EODHD remaps ASX→AU; Yahoo uses .AX
+  ASX: ".AX",
+  SHG: ".SS",
+  SHE: ".SZ",
+  MI: ".MI",
 };
 
 /**
@@ -114,7 +119,7 @@ function toFinnhubSymbol(ticker: string, currency: string): string {
 
 /** 30-day daily closes for crypto tickers via CoinGecko market_chart. Returns {} on any failure. */
 export async function fetchCryptoSparks(
-  tickers: string[]
+  tickers: string[],
 ): Promise<Record<string, number[]>> {
   const crypto = tickers.filter((t) => CRYPTO_IDS[t]);
   if (crypto.length === 0) return {};
@@ -125,23 +130,23 @@ export async function fetchCryptoSparks(
       try {
         const id = CRYPTO_IDS[ticker];
         const res = await fetch(
-          `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=30&interval=daily`
+          `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=30&interval=daily`,
         );
         if (!res.ok) return;
         const json = await res.json();
         const closes = (json.prices as [number, number][]).map(([, p]) => p);
         if (closes.length >= 2) results[ticker] = closes;
       } catch {}
-    })
+    }),
   );
   return results;
 }
 
 export interface PriceProviders {
-  eodhd?:     boolean;
-  yahoo?:     boolean;
+  eodhd?: boolean;
+  yahoo?: boolean;
   coingecko?: boolean;
-  goldapi?:   boolean;
+  goldapi?: boolean;
 }
 
 /**
@@ -152,77 +157,106 @@ export interface PriceProviders {
 export async function fetchLivePrices(
   tickers: string[],
   tickerCurrency: Record<string, string> = {},
-  providers: PriceProviders = {}
+  providers: PriceProviders = {},
 ): Promise<Record<string, number>> {
   const prices: Record<string, number> = {};
   if (tickers.length === 0) return prices;
 
-  const crypto   = tickers.filter((t) => CRYPTO_IDS[t]);
-  const gold     = tickers.filter((t) => GOLD_TICKERS.has(t));
-  const equities = tickers.filter((t) => !CRYPTO_IDS[t] && !GOLD_TICKERS.has(t));
+  const crypto = tickers.filter((t) => CRYPTO_IDS[t]);
+  const gold = tickers.filter((t) => GOLD_TICKERS.has(t));
+  const equities = tickers.filter(
+    (t) => !CRYPTO_IDS[t] && !GOLD_TICKERS.has(t),
+  );
 
   await Promise.all([
-    crypto.length > 0 && (providers.coingecko ?? true) && (async () => {
-      const ids = crypto.map((t) => CRYPTO_IDS[t]).join(",");
-      const res = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`
-      );
-      if (res.ok) {
-        const json = await res.json();
-        for (const t of crypto) {
-          const p = json[CRYPTO_IDS[t]]?.usd;
-          if (p) prices[t] = p;
-        }
-      }
-    })(),
-
-    gold.length > 0 && (providers.goldapi ?? true) && process.env.GOLDAPI_KEY && (async () => {
-      const res = await fetch("https://www.goldapi.io/api/XAU/USD", {
-        headers: { "x-access-token": process.env.GOLDAPI_KEY! },
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.price) for (const t of gold) prices[t] = json.price;
-      }
-    })(),
-
-    equities.length > 0 && (providers.eodhd ?? true) && process.env.EODHD_API_KEY && (async () => {
-      // Build symbol → original ticker reverse map, then do one bulk call instead of N
-      const symbolToTicker: Record<string, string> = {};
-      const symbols = equities.map((ticker) => {
-        const sym = toEohdSymbol(ticker, tickerCurrency[ticker] ?? "USD");
-        symbolToTicker[sym] = ticker;
-        return sym;
-      });
-      try {
-        const [first, ...rest] = symbols;
-        const extra = rest.length > 0 ? `&s=${rest.join(",")}` : "";
+    crypto.length > 0 &&
+      (providers.coingecko ?? true) &&
+      (async () => {
+        const ids = crypto.map((t) => CRYPTO_IDS[t]).join(",");
         const res = await fetch(
-          `https://eodhd.com/api/real-time/${first}?api_token=${process.env.EODHD_API_KEY}&fmt=json${extra}`
+          `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`,
         );
-        if (!res.ok) {
-          console.warn("[fetchLivePrices] EODHD non-ok:", res.status, symbols);
-          return;
-        }
-        const json = await res.json();
-        // Single ticker → plain object; multiple tickers → array
-        const items: { code: string; close: unknown }[] = Array.isArray(json) ? json : [json];
-        for (const item of items) {
-          const ticker = symbolToTicker[item.code];
-          if (!ticker) {
-            console.warn("[fetchLivePrices] unmatched EODHD code:", item.code, "→ map has:", Object.keys(symbolToTicker));
+        if (res.ok) {
+          const json = await res.json();
+          for (const t of crypto) {
+            const p = json[CRYPTO_IDS[t]]?.usd;
+            if (p) prices[t] = p;
           }
-          // EODHD returns "NA" (string) for exchanges not in plan; treat as no data
-          const close = typeof item.close === "number" && item.close > 0 ? item.close : null;
-          if (!close) {
-            console.warn("[fetchLivePrices] no usable close for", item.code, "got:", item.close);
-          }
-          if (ticker && close) prices[ticker] = close;
         }
-      } catch (e) {
-        console.warn("[fetchLivePrices] EODHD error:", e);
-      }
-    })(),
+      })(),
+
+    gold.length > 0 &&
+      (providers.goldapi ?? true) &&
+      process.env.GOLDAPI_KEY &&
+      (async () => {
+        const res = await fetch("https://www.goldapi.io/api/XAU/USD", {
+          headers: { "x-access-token": process.env.GOLDAPI_KEY! },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.price) for (const t of gold) prices[t] = json.price;
+        }
+      })(),
+
+    equities.length > 0 &&
+      (providers.eodhd ?? true) &&
+      process.env.EODHD_API_KEY &&
+      (async () => {
+        // Build symbol → original ticker reverse map, then do one bulk call instead of N
+        const symbolToTicker: Record<string, string> = {};
+        const symbols = equities.map((ticker) => {
+          const sym = toEohdSymbol(ticker, tickerCurrency[ticker] ?? "USD");
+          symbolToTicker[sym] = ticker;
+          return sym;
+        });
+        try {
+          const [first, ...rest] = symbols;
+          const extra = rest.length > 0 ? `&s=${rest.join(",")}` : "";
+          const res = await fetch(
+            `https://eodhd.com/api/real-time/${first}?api_token=${process.env.EODHD_API_KEY}&fmt=json${extra}`,
+          );
+          if (!res.ok) {
+            console.warn(
+              "[fetchLivePrices] EODHD non-ok:",
+              res.status,
+              symbols,
+            );
+            return;
+          }
+          const json = await res.json();
+          // Single ticker → plain object; multiple tickers → array
+          const items: { code: string; close: unknown }[] = Array.isArray(json)
+            ? json
+            : [json];
+          for (const item of items) {
+            const ticker = symbolToTicker[item.code];
+            if (!ticker) {
+              console.warn(
+                "[fetchLivePrices] unmatched EODHD code:",
+                item.code,
+                "→ map has:",
+                Object.keys(symbolToTicker),
+              );
+            }
+            // EODHD returns "NA" (string) for exchanges not in plan; treat as no data
+            const close =
+              typeof item.close === "number" && item.close > 0
+                ? item.close
+                : null;
+            if (!close) {
+              console.warn(
+                "[fetchLivePrices] no usable close for",
+                item.code,
+                "got:",
+                item.close,
+              );
+            }
+            if (ticker && close) prices[ticker] = close;
+          }
+        } catch (e) {
+          console.warn("[fetchLivePrices] EODHD error:", e);
+        }
+      })(),
   ]);
 
   // Yahoo Finance fallback via yahoo-finance2 (handles crumb/auth internally).
@@ -236,11 +270,19 @@ export async function fetchLivePrices(
       yahooSymbols.push(sym);
     }
     try {
-      const results = await yahooFinance.quote(yahooSymbols, {}, { validateResult: false });
+      const results = await yahooFinance.quote(
+        yahooSymbols,
+        {},
+        { validateResult: false },
+      );
       const arr = Array.isArray(results) ? results : [results];
       for (const q of arr) {
         const ticker = yahooSymbolToTicker[q.symbol];
-        if (ticker && typeof q.regularMarketPrice === "number" && q.regularMarketPrice > 0) {
+        if (
+          ticker &&
+          typeof q.regularMarketPrice === "number" &&
+          q.regularMarketPrice > 0
+        ) {
           prices[ticker] = q.regularMarketPrice;
         }
       }
@@ -259,12 +301,14 @@ export async function fetchLivePrices(
  */
 export async function fetchEquitySparks(
   tickers: string[],
-  tickerCurrency: Record<string, string> = {}
+  tickerCurrency: Record<string, string> = {},
 ): Promise<Record<string, number[]>> {
   const key = process.env.FINNHUB_API_KEY;
   if (!key) return {};
 
-  const equities = tickers.filter((t) => !CRYPTO_IDS[t] && !GOLD_TICKERS.has(t));
+  const equities = tickers.filter(
+    (t) => !CRYPTO_IDS[t] && !GOLD_TICKERS.has(t),
+  );
   if (equities.length === 0) return {};
 
   const now = Math.floor(Date.now() / 1000);
@@ -276,14 +320,15 @@ export async function fetchEquitySparks(
       const symbol = toFinnhubSymbol(ticker, tickerCurrency[ticker] ?? "USD");
       try {
         const res = await fetch(
-          `https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=D&from=${from}&to=${now}&token=${key}`
+          `https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=D&from=${from}&to=${now}&token=${key}`,
         );
         if (!res.ok) return;
         const json = await res.json();
-        if (json.s !== "ok" || !Array.isArray(json.c) || json.c.length < 2) return;
+        if (json.s !== "ok" || !Array.isArray(json.c) || json.c.length < 2)
+          return;
         results[ticker] = json.c as number[];
       } catch {}
-    })
+    }),
   );
   return results;
 }
@@ -302,7 +347,9 @@ export async function fetchLiveFxRates(): Promise<Record<string, number>> {
     const json = await res.json();
     const raw = json.rates as Record<string, number>;
     return Object.fromEntries(
-      Object.entries(raw).filter(([, r]) => r > 0).map(([ccy, r]) => [ccy, 1 / r])
+      Object.entries(raw)
+        .filter(([, r]) => r > 0)
+        .map(([ccy, r]) => [ccy, 1 / r]),
     );
   } catch {
     return {};

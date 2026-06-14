@@ -24,7 +24,6 @@ interface StaleTicker {
   priceRefreshedAt: string | null;
 }
 
-
 export default async function AdminPage() {
   // --- Auth: cookie-based check ---
   const supabase = await createClient();
@@ -83,30 +82,41 @@ export default async function AdminPage() {
   // Build per-user holding counts
   const holdingCountByUser: Record<string, number> = {};
   (holdingsByUser ?? []).forEach((row: { user_id: string }) => {
-    holdingCountByUser[row.user_id] = (holdingCountByUser[row.user_id] ?? 0) + 1;
+    holdingCountByUser[row.user_id] =
+      (holdingCountByUser[row.user_id] ?? 0) + 1;
   });
 
   // Merge settings map
   const settingsMap: Record<string, { displayName: string; role: string }> = {};
   (settingsRows ?? []).forEach(
     (s: { user_id: string; display_name: string | null; role: string }) => {
-      settingsMap[s.user_id] = { displayName: s.display_name ?? "", role: s.role };
-    }
+      settingsMap[s.user_id] = {
+        displayName: s.display_name ?? "",
+        role: s.role,
+      };
+    },
   );
 
-  const tableRows: AdminUserRow[] = ((authData as { users: User[] } | null)?.users ?? []).map(
-    (u: User) => ({
-      id: u.id,
-      email: u.email ?? "(no email)",
-      joinedAt: u.created_at,
-      displayName: settingsMap[u.id]?.displayName ?? "",
-      role: settingsMap[u.id]?.role ?? "user",
-      holdingCount: holdingCountByUser[u.id] ?? 0,
-    })
-  );
+  const tableRows: AdminUserRow[] = (
+    (authData as { users: User[] } | null)?.users ?? []
+  ).map((u: User) => ({
+    id: u.id,
+    email: u.email ?? "(no email)",
+    joinedAt: u.created_at,
+    displayName: settingsMap[u.id]?.displayName ?? "",
+    role: settingsMap[u.id]?.role ?? "user",
+    holdingCount: holdingCountByUser[u.id] ?? 0,
+  }));
 
   const staleTickers: StaleTicker[] = (
-    staleRows as { id: string; ticker: string; name: string; price_refreshed_at: string | null }[] | null ?? []
+    (staleRows as
+      | {
+          id: string;
+          ticker: string;
+          name: string;
+          price_refreshed_at: string | null;
+        }[]
+      | null) ?? []
   ).map((r) => ({
     id: r.id,
     ticker: r.ticker,
@@ -118,8 +128,12 @@ export default async function AdminPage() {
     <div className="flex w-full min-w-0 flex-col gap-[18px]">
       <div className="mb-0.5 flex flex-wrap items-end justify-between gap-[18px] animate-reveal">
         <div>
-          <div className="text-[10.5px] font-semibold uppercase tracking-[.14em] text-gold">Admin</div>
-          <h2 className="mb-1 mt-1.5 font-serif text-[26px] font-normal tracking-[.2px]">Dashboard</h2>
+          <div className="text-[10.5px] font-semibold uppercase tracking-[.14em] text-gold">
+            Admin
+          </div>
+          <h2 className="mb-1 mt-1.5 font-serif text-[26px] font-normal tracking-[.2px]">
+            Dashboard
+          </h2>
           <div className="max-w-[440px] text-[13px] text-secondary">
             System health, user management, and price cache status.
           </div>
@@ -129,45 +143,68 @@ export default async function AdminPage() {
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-3.5 animate-reveal max-bp1080:grid-cols-2 max-bp480:grid-cols-2">
         <div className="relative flex flex-col gap-[5px] rounded-[14px] border border-subtle bg-[linear-gradient(180deg,rgba(255,255,255,0.025),transparent_42%),var(--bg-surface)] px-[18px] py-4 shadow-card transition-[transform,border-color,box-shadow] duration-[260ms] ease-[cubic-bezier(.2,.7,.2,1)] hover:-translate-y-[3px] hover:border-[rgba(186,170,255,0.18)] hover:shadow-[0_22px_44px_-26px_rgba(0,0,0,0.9)] max-bp600:px-3.5 max-bp600:py-[13px] max-bp480:px-3 max-bp480:py-[11px]">
-          <span className="text-[10.5px] font-semibold uppercase tracking-[.09em] text-muted">Total Users</span>
-          <span className="font-mono text-[23px] font-semibold tracking-[-.01em] tabular-nums max-bp600:text-[19px] max-bp480:text-[17px] max-bp380:text-[15px]">{tableRows.length}</span>
+          <span className="text-[10.5px] font-semibold uppercase tracking-[.09em] text-muted">
+            Total Users
+          </span>
+          <span className="font-mono text-[23px] font-semibold tracking-[-.01em] tabular-nums max-bp600:text-[19px] max-bp480:text-[17px] max-bp380:text-[15px]">
+            {tableRows.length}
+          </span>
         </div>
         <div className="relative flex flex-col gap-[5px] rounded-[14px] border border-subtle bg-[linear-gradient(180deg,rgba(255,255,255,0.025),transparent_42%),var(--bg-surface)] px-[18px] py-4 shadow-card transition-[transform,border-color,box-shadow] duration-[260ms] ease-[cubic-bezier(.2,.7,.2,1)] hover:-translate-y-[3px] hover:border-[rgba(186,170,255,0.18)] hover:shadow-[0_22px_44px_-26px_rgba(0,0,0,0.9)] max-bp600:px-3.5 max-bp600:py-[13px] max-bp480:px-3 max-bp480:py-[11px]">
-          <span className="text-[10.5px] font-semibold uppercase tracking-[.09em] text-muted">Total Holdings</span>
-          <span className="font-mono text-[23px] font-semibold tracking-[-.01em] tabular-nums max-bp600:text-[19px] max-bp480:text-[17px] max-bp380:text-[15px]">{totalHoldings ?? 0}</span>
+          <span className="text-[10.5px] font-semibold uppercase tracking-[.09em] text-muted">
+            Total Holdings
+          </span>
+          <span className="font-mono text-[23px] font-semibold tracking-[-.01em] tabular-nums max-bp600:text-[19px] max-bp480:text-[17px] max-bp380:text-[15px]">
+            {totalHoldings ?? 0}
+          </span>
         </div>
         <div className="relative flex flex-col gap-[5px] rounded-[14px] border border-subtle bg-[linear-gradient(180deg,rgba(255,255,255,0.025),transparent_42%),var(--bg-surface)] px-[18px] py-4 shadow-card transition-[transform,border-color,box-shadow] duration-[260ms] ease-[cubic-bezier(.2,.7,.2,1)] hover:-translate-y-[3px] hover:border-[rgba(186,170,255,0.18)] hover:shadow-[0_22px_44px_-26px_rgba(0,0,0,0.9)] max-bp600:px-3.5 max-bp600:py-[13px] max-bp480:px-3 max-bp480:py-[11px]">
-          <span className="text-[10.5px] font-semibold uppercase tracking-[.09em] text-muted">Stale Prices</span>
+          <span className="text-[10.5px] font-semibold uppercase tracking-[.09em] text-muted">
+            Stale Prices
+          </span>
           <span
             className="font-mono text-[23px] font-semibold tracking-[-.01em] tabular-nums max-bp600:text-[19px] max-bp480:text-[17px] max-bp380:text-[15px]"
-            style={{ color: (staleCount ?? 0) > 0 ? "var(--loss)" : "var(--gain)" }}
+            style={{
+              color: (staleCount ?? 0) > 0 ? "var(--loss)" : "var(--gain)",
+            }}
           >
             {staleCount ?? 0}
           </span>
-          <span className="font-ui text-xs text-secondary">null or &gt;1 h old</span>
+          <span className="font-ui text-xs text-secondary">
+            null or &gt;1 h old
+          </span>
         </div>
       </div>
 
       {/* User table */}
-      <div className="card px-5 py-4.5 animate-reveal max-bp768:overflow-hidden max-bp480:p-3.5 max-bp380:p-3" style={{ animationDelay: ".06s" }}>
+      <div
+        className="card px-5 py-4.5 animate-reveal max-bp768:overflow-hidden max-bp480:p-3.5 max-bp380:p-3"
+        style={{ animationDelay: ".06s" }}
+      >
         <div className="mb-4 flex items-baseline justify-between max-bp600:flex-wrap max-bp600:items-center max-bp600:gap-2">
-          <span className="text-[13px] font-semibold tracking-[.01em] text-primary">Users</span>
-          <span className="font-ui text-[11px] text-secondary">{tableRows.length} accounts</span>
+          <span className="text-[13px] font-semibold tracking-[.01em] text-primary">
+            Users
+          </span>
+          <span className="font-ui text-[11px] text-secondary">
+            {tableRows.length} accounts
+          </span>
         </div>
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-subtle">
-              {["Email", "Joined", "Display Name", "Holdings", "Role"].map((h, i) => (
-                <th
-                  key={h}
-                  className={
-                    "py-2 px-0 font-ui text-[11px] font-medium tracking-[.04em] text-secondary " +
-                    (i >= 3 ? "text-right" : "text-left")
-                  }
-                >
-                  {h}
-                </th>
-              ))}
+              {["Email", "Joined", "Display Name", "Holdings", "Role"].map(
+                (h, i) => (
+                  <th
+                    key={h}
+                    className={
+                      "py-2 px-0 font-ui text-[11px] font-medium tracking-[.04em] text-secondary " +
+                      (i >= 3 ? "text-right" : "text-left")
+                    }
+                  >
+                    {h}
+                  </th>
+                ),
+              )}
             </tr>
           </thead>
           <tbody>
@@ -199,14 +236,23 @@ export default async function AdminPage() {
       </div>
 
       {/* Price cache health */}
-      <div className="card px-5 py-4.5 animate-reveal max-bp768:overflow-hidden max-bp480:p-3.5 max-bp380:p-3" style={{ animationDelay: ".12s" }}>
+      <div
+        className="card px-5 py-4.5 animate-reveal max-bp768:overflow-hidden max-bp480:p-3.5 max-bp380:p-3"
+        style={{ animationDelay: ".12s" }}
+      >
         <div className="mb-4 flex items-baseline justify-between max-bp600:flex-wrap max-bp600:items-center max-bp600:gap-2">
-          <span className="text-[13px] font-semibold tracking-[.01em] text-primary">Price Cache Health</span>
+          <span className="text-[13px] font-semibold tracking-[.01em] text-primary">
+            Price Cache Health
+          </span>
           <span
             className="font-ui text-[11px] text-secondary"
-            style={{ color: staleTickers.length > 0 ? "var(--loss)" : undefined }}
+            style={{
+              color: staleTickers.length > 0 ? "var(--loss)" : undefined,
+            }}
           >
-            {staleTickers.length === 0 ? "All fresh" : `${staleTickers.length} stale`}
+            {staleTickers.length === 0
+              ? "All fresh"
+              : `${staleTickers.length} stale`}
           </span>
         </div>
         {staleTickers.length === 0 ? (
@@ -221,8 +267,12 @@ export default async function AdminPage() {
                 className="flex items-center justify-between border-b border-subtle py-[9px]"
               >
                 <div className="flex items-center gap-2.5">
-                  <span className="font-mono text-xs tabular-nums">{t.ticker}</span>
-                  <span className="font-ui text-xs text-secondary">{t.name}</span>
+                  <span className="font-mono text-xs tabular-nums">
+                    {t.ticker}
+                  </span>
+                  <span className="font-ui text-xs text-secondary">
+                    {t.name}
+                  </span>
                 </div>
                 <span className="font-ui text-[11px] tracking-[.04em] text-secondary">
                   {t.priceRefreshedAt
@@ -236,11 +286,17 @@ export default async function AdminPage() {
       </div>
 
       {/* Currency editor */}
-      <div className="card px-5 py-4.5 animate-reveal max-bp768:overflow-hidden max-bp480:p-3.5 max-bp380:p-3" style={{ animationDelay: ".18s" }}>
+      <div
+        className="card px-5 py-4.5 animate-reveal max-bp768:overflow-hidden max-bp480:p-3.5 max-bp380:p-3"
+        style={{ animationDelay: ".18s" }}
+      >
         <div className="mb-4 flex items-baseline justify-between max-bp600:flex-wrap max-bp600:items-center max-bp600:gap-2">
-          <span className="text-[13px] font-semibold tracking-[.01em] text-primary">Supported Currencies</span>
+          <span className="text-[13px] font-semibold tracking-[.01em] text-primary">
+            Supported Currencies
+          </span>
           <span className="font-ui text-[11px] text-secondary">
-            {(currencyRows ?? []).filter((c: CurrencyRow) => c.active).length} active
+            {(currencyRows ?? []).filter((c: CurrencyRow) => c.active).length}{" "}
+            active
           </span>
         </div>
         <div>
@@ -257,11 +313,17 @@ export default async function AdminPage() {
       </div>
 
       {/* Exchange editor */}
-      <div className="card px-5 py-4.5 animate-reveal max-bp768:overflow-hidden max-bp480:p-3.5 max-bp380:p-3" style={{ animationDelay: ".24s" }}>
+      <div
+        className="card px-5 py-4.5 animate-reveal max-bp768:overflow-hidden max-bp480:p-3.5 max-bp380:p-3"
+        style={{ animationDelay: ".24s" }}
+      >
         <div className="mb-4 flex items-baseline justify-between max-bp600:flex-wrap max-bp600:items-center max-bp600:gap-2">
-          <span className="text-[13px] font-semibold tracking-[.01em] text-primary">Supported Exchanges</span>
+          <span className="text-[13px] font-semibold tracking-[.01em] text-primary">
+            Supported Exchanges
+          </span>
           <span className="font-ui text-[11px] text-secondary">
-            {(exchangeRows ?? []).filter((e: ExchangeRow) => e.active).length} active
+            {(exchangeRows ?? []).filter((e: ExchangeRow) => e.active).length}{" "}
+            active
           </span>
         </div>
         <div>
@@ -280,22 +342,69 @@ export default async function AdminPage() {
       </div>
 
       {/* API provider toggles */}
-      <div className="card px-5 py-4.5 animate-reveal max-bp768:overflow-hidden max-bp480:p-3.5 max-bp380:p-3" style={{ animationDelay: ".30s" }}>
+      <div
+        className="card px-5 py-4.5 animate-reveal max-bp768:overflow-hidden max-bp480:p-3.5 max-bp380:p-3"
+        style={{ animationDelay: ".30s" }}
+      >
         <div className="mb-4 flex items-baseline justify-between max-bp600:flex-wrap max-bp600:items-center max-bp600:gap-2">
-          <span className="text-[13px] font-semibold tracking-[.01em] text-primary">Price Data Providers</span>
-          <span className="font-ui text-[11px] text-secondary">disable to preserve quotas during testing</span>
+          <span className="text-[13px] font-semibold tracking-[.01em] text-primary">
+            Price Data Providers
+          </span>
+          <span className="font-ui text-[11px] text-secondary">
+            disable to preserve quotas during testing
+          </span>
         </div>
         <div>
           {(
             [
-              { code: "eodhd",       label: "EODHD",          region: "Equities — primary (limited daily quota)",    active: providerFlags.eodhd },
-              { code: "yahoo",       label: "Yahoo Finance",  region: "Equities — fallback",                       active: providerFlags.yahoo },
-              { code: "coingecko",   label: "CoinGecko",      region: "Crypto prices & sparklines",                active: providerFlags.coingecko },
-              { code: "goldapi",     label: "Gold API",        region: "Gold spot price",                           active: providerFlags.goldapi },
-              { code: "finnhub",     label: "Finnhub",         region: "Equity sparklines, quotes, news, FX candles", active: providerFlags.finnhub },
-              { code: "frankfurter", label: "Frankfurter",     region: "Live & historical FX rates",                active: providerFlags.frankfurter },
-              { code: "anthropic",   label: "Anthropic",       region: "Analyst AI (Claude)",                       active: providerFlags.anthropic },
-            ] as { code: string; label: string; region: string; active: boolean }[]
+              {
+                code: "eodhd",
+                label: "EODHD",
+                region: "Equities — primary (limited daily quota)",
+                active: providerFlags.eodhd,
+              },
+              {
+                code: "yahoo",
+                label: "Yahoo Finance",
+                region: "Equities — fallback",
+                active: providerFlags.yahoo,
+              },
+              {
+                code: "coingecko",
+                label: "CoinGecko",
+                region: "Crypto prices & sparklines",
+                active: providerFlags.coingecko,
+              },
+              {
+                code: "goldapi",
+                label: "Gold API",
+                region: "Gold spot price",
+                active: providerFlags.goldapi,
+              },
+              {
+                code: "finnhub",
+                label: "Finnhub",
+                region: "Equity sparklines, quotes, news, FX candles",
+                active: providerFlags.finnhub,
+              },
+              {
+                code: "frankfurter",
+                label: "Frankfurter",
+                region: "Live & historical FX rates",
+                active: providerFlags.frankfurter,
+              },
+              {
+                code: "anthropic",
+                label: "Anthropic",
+                region: "Analyst AI (Claude)",
+                active: providerFlags.anthropic,
+              },
+            ] as {
+              code: string;
+              label: string;
+              region: string;
+              active: boolean;
+            }[]
           ).map((p) => (
             <ActiveToggle
               key={p.code}

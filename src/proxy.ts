@@ -27,11 +27,11 @@ function applySecurityHeaders(response: NextResponse, nonce: string): void {
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=()"
+    "camera=(), microphone=(), geolocation=()",
   );
   response.headers.set(
     "Strict-Transport-Security",
-    "max-age=63072000; includeSubDomains"
+    "max-age=63072000; includeSubDomains",
   );
 }
 
@@ -49,7 +49,9 @@ export async function proxy(request: NextRequest) {
 
   // Must initialise supabaseResponse before createServerClient so setAll can
   // mutate it — the response reference is captured by closure.
-  let supabaseResponse = NextResponse.next({ request: { headers: reqHeaders } });
+  let supabaseResponse = NextResponse.next({
+    request: { headers: reqHeaders },
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -62,7 +64,7 @@ export async function proxy(request: NextRequest) {
         setAll(cookiesToSet) {
           // Mirror onto request so downstream server components see fresh tokens.
           cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
+            request.cookies.set(name, value),
           );
           // Re-create with updated request + enriched headers so nonce propagates.
           const refreshedHeaders = new Headers(request.headers);
@@ -72,11 +74,11 @@ export async function proxy(request: NextRequest) {
             request: { headers: refreshedHeaders },
           });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, options),
           );
         },
       },
-    }
+    },
   );
 
   // Do NOT put any logic between createServerClient and getUser().

@@ -3,9 +3,19 @@
 import { motion, useReducedMotion } from "motion/react";
 import { useOptimisticValue } from "@/hooks/useOptimisticToggle";
 
-export function RoleToggle({ userId, initialRole }: { userId: string; initialRole: string }) {
+export function RoleToggle({
+  userId,
+  initialRole,
+}: {
+  userId: string;
+  initialRole: string;
+}) {
   const reduce = useReducedMotion();
-  const { value: role, busy, commit } = useOptimisticValue(
+  const {
+    value: role,
+    busy,
+    commit,
+  } = useOptimisticValue(
     initialRole,
     (next) =>
       fetch(`/api/admin/users/${userId}`, {
@@ -13,7 +23,7 @@ export function RoleToggle({ userId, initialRole }: { userId: string; initialRol
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: next }),
       }),
-    (next) => `Role changed to ${next}`
+    (next) => `Role changed to ${next}`,
   );
 
   return (
@@ -26,7 +36,11 @@ export function RoleToggle({ userId, initialRole }: { userId: string; initialRol
       whileTap={reduce ? undefined : { scale: 0.94 }}
       onClick={() => commit(role === "admin" ? "user" : "admin")}
       disabled={busy}
-      title={role === "admin" ? "Click to demote to user" : "Click to promote to admin"}
+      title={
+        role === "admin"
+          ? "Click to demote to user"
+          : "Click to promote to admin"
+      }
     >
       {busy ? "…" : role}
     </motion.button>

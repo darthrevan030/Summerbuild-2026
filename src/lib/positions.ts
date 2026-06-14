@@ -54,11 +54,22 @@ function mostRecent(lots: HoldingRow[]): HoldingRow {
 /** Project a single lot's fields onto the flat Position shape. */
 function passthrough(h: HoldingRow) {
   return {
-    name: h.name, ticker: h.ticker, assetType: h.assetType, broker: h.broker,
-    strategy: h.strategy, currency: h.currency, flag: h.flag, icon: h.icon,
-    units: h.units, costSGD: h.costSGD, valueSGD: h.valueSGD,
-    assetGain: h.assetGain, fxGain: h.fxGain, totalPct: h.totalPct,
-    avgBuyPrice: h.buyPrice, currentPrice: h.currentPrice,
+    name: h.name,
+    ticker: h.ticker,
+    assetType: h.assetType,
+    broker: h.broker,
+    strategy: h.strategy,
+    currency: h.currency,
+    flag: h.flag,
+    icon: h.icon,
+    units: h.units,
+    costSGD: h.costSGD,
+    valueSGD: h.valueSGD,
+    assetGain: h.assetGain,
+    fxGain: h.fxGain,
+    totalPct: h.totalPct,
+    avgBuyPrice: h.buyPrice,
+    currentPrice: h.currentPrice,
   };
 }
 
@@ -69,19 +80,21 @@ function aggregate(key: string, lots: HoldingRow[]): Position {
     return { key, isGroup: false, lots, ...passthrough(first) };
   }
 
-  const units    = sum(lots, (l) => l.units);
-  const costSGD  = sum(lots, (l) => l.costSGD);
+  const units = sum(lots, (l) => l.units);
+  const costSGD = sum(lots, (l) => l.costSGD);
   const valueSGD = sum(lots, (l) => l.valueSGD);
   const assetGain = sum(lots, (l) => l.assetGain);
-  const fxGain    = sum(lots, (l) => l.fxGain);
-  const totalPct  = costSGD > 0 ? ((valueSGD - costSGD) / costSGD) * 100 : 0;
+  const fxGain = sum(lots, (l) => l.fxGain);
+  const totalPct = costSGD > 0 ? ((valueSGD - costSGD) / costSGD) * 100 : 0;
 
   // Cost-weighted average entry price — each lot weighted by its unit count.
-  const avgBuyPrice = units > 0 ? sum(lots, (l) => l.buyPrice * l.units) / units : 0;
+  const avgBuyPrice =
+    units > 0 ? sum(lots, (l) => l.buyPrice * l.units) / units : 0;
   // Same security across lots → use the freshest current price.
   const currentPrice = mostRecent(lots).currentPrice;
 
-  const allSame = <T,>(get: (l: HoldingRow) => T) => lots.every((l) => get(l) === get(first));
+  const allSame = <T>(get: (l: HoldingRow) => T) =>
+    lots.every((l) => get(l) === get(first));
 
   return {
     key,
@@ -95,8 +108,14 @@ function aggregate(key: string, lots: HoldingRow[]): Position {
     currency: first.currency,
     flag: first.flag,
     icon: first.icon,
-    units, costSGD, valueSGD, assetGain, fxGain, totalPct,
-    avgBuyPrice, currentPrice,
+    units,
+    costSGD,
+    valueSGD,
+    assetGain,
+    fxGain,
+    totalPct,
+    avgBuyPrice,
+    currentPrice,
   };
 }
 
@@ -112,5 +131,7 @@ export function groupIntoPositions(holdings: HoldingRow[]): Position[] {
     if (arr) arr.push(h);
     else groups.set(k, [h]);
   }
-  return Array.from(groups.entries()).map(([key, lots]) => aggregate(key, lots));
+  return Array.from(groups.entries()).map(([key, lots]) =>
+    aggregate(key, lots),
+  );
 }

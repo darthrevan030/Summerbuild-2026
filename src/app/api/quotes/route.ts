@@ -13,25 +13,29 @@ export async function GET(req: NextRequest) {
   if (limited) return limited;
 
   const { finnhub: enabled } = await getProviderFlags();
-  if (!enabled) return Response.json({ price: null, change: null, changePct: null });
+  if (!enabled)
+    return Response.json({ price: null, change: null, changePct: null });
 
   const symbol = req.nextUrl.searchParams.get("symbol");
-  if (!symbol) return Response.json({ error: "symbol required" }, { status: 400 });
+  if (!symbol)
+    return Response.json({ error: "symbol required" }, { status: 400 });
   if (!SYMBOL_RE.test(symbol))
     return Response.json({ error: "invalid symbol format" }, { status: 400 });
 
   const key = process.env.FINNHUB_API_KEY;
-  if (!key) return Response.json({ error: "Service unavailable" }, { status: 503 });
+  if (!key)
+    return Response.json({ error: "Service unavailable" }, { status: 503 });
 
   const res = await fetch(
     `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${key}`,
-    { next: { revalidate: 60 } }
+    { next: { revalidate: 60 } },
   );
-  if (!res.ok) return Response.json({ error: "quote fetch failed" }, { status: 502 });
+  if (!res.ok)
+    return Response.json({ error: "quote fetch failed" }, { status: 502 });
 
   const q = await res.json();
   return Response.json(
     { price: q.c, change: q.d, changePct: q.dp },
-    { headers: { "Cache-Control": "public, s-maxage=60" } }
+    { headers: { "Cache-Control": "public, s-maxage=60" } },
   );
 }

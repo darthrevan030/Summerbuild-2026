@@ -1,5 +1,5 @@
 export async function fetchPrices(
-  tickers: string[]
+  tickers: string[],
 ): Promise<Record<string, number>> {
   const res = await fetch("/api/prices", {
     method: "POST",
@@ -12,7 +12,7 @@ export async function fetchPrices(
 
 export async function fetchFx(
   base = "SGD",
-  date?: string
+  date?: string,
 ): Promise<Record<string, number>> {
   const params = new URLSearchParams({ base });
   if (date) params.set("date", date);
@@ -22,14 +22,17 @@ export async function fetchFx(
 }
 
 export async function fetchQuote(
-  symbol: string
+  symbol: string,
 ): Promise<{ price: number; change: number; changePct: number }> {
   const res = await fetch(`/api/quotes?symbol=${encodeURIComponent(symbol)}`);
   if (!res.ok) throw new Error(`fetchQuote failed: ${res.status}`);
   return res.json();
 }
 
-export async function refreshHoldingPrices(): Promise<{ refreshed: number; skipped: number }> {
+export async function refreshHoldingPrices(): Promise<{
+  refreshed: number;
+  skipped: number;
+}> {
   const res = await fetch("/api/holdings/refresh", { method: "POST" });
   if (!res.ok) throw new Error(`refreshHoldingPrices failed: ${res.status}`);
   return res.json();
@@ -38,7 +41,7 @@ export async function refreshHoldingPrices(): Promise<{ refreshed: number; skipp
 export async function streamAnalysis(
   prompt: string,
   onChunk: (text: string) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<void> {
   const res = await fetch("/api/analyst", {
     method: "POST",
@@ -58,10 +61,14 @@ export async function streamAnalysis(
       if (line.startsWith("data: ")) {
         const text = line.slice(6);
         if (text === "[DONE]") break outer;
-        if (text === "[ERROR]") { errored = true; break outer; }
+        if (text === "[ERROR]") {
+          errored = true;
+          break outer;
+        }
         onChunk(text);
       }
     }
   }
-  if (errored) throw new Error("Analysis engine error — check ANTHROPIC_API_KEY");
+  if (errored)
+    throw new Error("Analysis engine error — check ANTHROPIC_API_KEY");
 }

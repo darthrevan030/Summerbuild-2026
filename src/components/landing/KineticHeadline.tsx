@@ -42,9 +42,17 @@ export function KineticHeadline({
         const emphasised = t.startsWith("*") && t.endsWith("*");
         const label = emphasised ? t.slice(1, -1) : t;
         return (
-          <span key={i} className={"inline-block overflow-hidden align-bottom pb-[0.12em]" + (i < tokens.length - 1 ? " mr-[0.24em]" : "")}>
+          <span
+            key={i}
+            className={
+              "inline-block overflow-hidden align-bottom pb-[0.12em]" +
+              (i < tokens.length - 1 ? " mr-[0.24em]" : "")
+            }
+          >
             <motion.span
-              className={"inline-block" + (emphasised ? " italic text-gold" : "")}
+              className={
+                "inline-block" + (emphasised ? " italic text-gold" : "")
+              }
               variants={reduce ? undefined : word}
             >
               {label}

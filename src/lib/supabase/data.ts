@@ -16,10 +16,16 @@ async function makeServerClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return cookieStore.getAll(); },
-        setAll(list) { list.forEach(({ name, value, options }) => cookieStore.set(name, value, options)); },
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(list) {
+          list.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options),
+          );
+        },
       },
-    }
+    },
   );
 }
 
@@ -113,7 +119,7 @@ export async function fetchHoldings(userId: string): Promise<HoldingRow[]> {
 }
 
 export async function insertHolding(
-  payload: Omit<DbHolding, "id" | "created_at" | "updated_at">
+  payload: Omit<DbHolding, "id" | "created_at" | "updated_at">,
 ): Promise<HoldingRow | null> {
   const supabase = await makeServerClient();
   const { data, error } = await supabase
@@ -133,10 +139,23 @@ export async function insertHolding(
 export async function updateHolding(
   id: string,
   userId: string,
-  patch: Partial<Pick<DbHolding,
-    "ticker" | "name" | "asset_type" | "broker" | "strategy" | "units" |
-    "currency" | "buy_price" | "buy_date" | "buy_fx_rate" | "current_price" | "current_fx_rate"
-  >>
+  patch: Partial<
+    Pick<
+      DbHolding,
+      | "ticker"
+      | "name"
+      | "asset_type"
+      | "broker"
+      | "strategy"
+      | "units"
+      | "currency"
+      | "buy_price"
+      | "buy_date"
+      | "buy_fx_rate"
+      | "current_price"
+      | "current_fx_rate"
+    >
+  >,
 ): Promise<HoldingRow | null> {
   const supabase = await makeServerClient();
   const { data, error } = await supabase
@@ -146,7 +165,10 @@ export async function updateHolding(
     .eq("user_id", userId)
     .select()
     .single();
-  if (error) { console.error("[updateHolding]", error.message); return null; }
+  if (error) {
+    console.error("[updateHolding]", error.message);
+    return null;
+  }
   return toHoldingRow(data as DbHolding);
 }
 
@@ -155,7 +177,7 @@ export async function updateHoldingPrice(
   currentPrice: number,
   currentFxRate: number,
   userId: string,
-  sparkData?: number[]
+  sparkData?: number[],
 ): Promise<void> {
   const supabase = await makeServerClient();
   const patch: Record<string, unknown> = {
@@ -164,7 +186,11 @@ export async function updateHoldingPrice(
     price_refreshed_at: new Date().toISOString(),
   };
   if (sparkData && sparkData.length >= 2) patch.spark_data = sparkData;
-  await supabase.from("holdings").update(patch).eq("id", id).eq("user_id", userId);
+  await supabase
+    .from("holdings")
+    .update(patch)
+    .eq("id", id)
+    .eq("user_id", userId);
 }
 
 export async function deleteHolding(id: string, userId: string): Promise<void> {
@@ -207,7 +233,9 @@ export async function fetchSnapshots(userId: string): Promise<SnapshotRow[]> {
   for (let from = 0; ; from += SNAPSHOT_PAGE) {
     const { data, error } = await supabase
       .from("portfolio_snapshots")
-      .select("recorded_date, value_sgd, cost_sgd, fx_impact_sgd, fx_by_currency")
+      .select(
+        "recorded_date, value_sgd, cost_sgd, fx_impact_sgd, fx_by_currency",
+      )
       .eq("user_id", userId)
       .order("recorded_date", { ascending: true })
       .range(from, from + SNAPSHOT_PAGE - 1);
@@ -235,7 +263,10 @@ export async function fetchSnapshots(userId: string): Promise<SnapshotRow[]> {
   return rows;
 }
 
-export async function recordSnapshot(userId: string, holdings: HoldingRow[]): Promise<void> {
+export async function recordSnapshot(
+  userId: string,
+  holdings: HoldingRow[],
+): Promise<void> {
   const valueSgd = holdings.reduce((s, h) => s + h.valueSGD, 0);
   const costSgd = holdings.reduce((s, h) => s + h.costSGD, 0);
   const fxImpactSgd = holdings.reduce((s, h) => s + h.fxGain, 0);
@@ -256,22 +287,26 @@ export async function recordSnapshot(userId: string, holdings: HoldingRow[]): Pr
       fx_impact_sgd: Math.round(fxImpactSgd),
       fx_by_currency: fxByCurrency,
     },
-    { onConflict: "user_id,recorded_date" }
+    { onConflict: "user_id,recorded_date" },
   );
 }
 
 export async function upsertUserSettings(
   userId: string,
-  settings: Partial<UserSettings>
+  settings: Partial<UserSettings>,
 ): Promise<void> {
   const supabase = await makeServerClient();
   await supabase.from("user_settings").upsert(
     {
       user_id: userId,
-      ...(settings.displayName !== undefined && { display_name: settings.displayName }),
-      ...(settings.baseCurrency !== undefined && { base_currency: settings.baseCurrency }),
+      ...(settings.displayName !== undefined && {
+        display_name: settings.displayName,
+      }),
+      ...(settings.baseCurrency !== undefined && {
+        base_currency: settings.baseCurrency,
+      }),
       updated_at: new Date().toISOString(),
     },
-    { onConflict: "user_id" }
+    { onConflict: "user_id" },
   );
 }

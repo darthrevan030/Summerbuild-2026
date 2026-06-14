@@ -10,7 +10,7 @@ import { toast } from "sonner";
 export function useOptimisticValue<T>(
   initial: T,
   send: (next: T) => Promise<Response>,
-  successMsg?: (next: T) => string
+  successMsg?: (next: T) => string,
 ) {
   const [value, setValue] = useState(initial);
   const [busy, setBusy] = useState(false);

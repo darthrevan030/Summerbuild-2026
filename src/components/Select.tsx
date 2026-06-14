@@ -12,7 +12,7 @@ export function Select({ value, options, onChange }: SelectProps) {
   const [open, setOpen] = useState(false);
   const [dropStyle, setDropStyle] = useState<React.CSSProperties>({});
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const dropRef    = useRef<HTMLDivElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
 
   const openDrop = useCallback(() => {
     const r = triggerRef.current?.getBoundingClientRect();
@@ -25,7 +25,8 @@ export function Select({ value, options, onChange }: SelectProps) {
     if (!open) return;
     const close = (e: MouseEvent) => {
       const t = e.target as Node;
-      if (!triggerRef.current?.contains(t) && !dropRef.current?.contains(t)) setOpen(false);
+      if (!triggerRef.current?.contains(t) && !dropRef.current?.contains(t))
+        setOpen(false);
     };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
@@ -49,7 +50,10 @@ export function Select({ value, options, onChange }: SelectProps) {
           name="chevron"
           size={14}
           className="shrink-0 text-muted"
-          style={{ transform: open ? "rotate(180deg)" : undefined, transition: "transform .15s" }}
+          style={{
+            transform: open ? "rotate(180deg)" : undefined,
+            transition: "transform .15s",
+          }}
         />
       </button>
       {open && (
@@ -66,8 +70,14 @@ export function Select({ value, options, onChange }: SelectProps) {
                 "block w-full cursor-pointer whitespace-nowrap rounded-[7px] px-[11px] py-2 text-left font-flag text-[13px] transition-[background,color] duration-100 hover:bg-elevated hover:text-primary " +
                 (o === value ? "text-gold" : "text-secondary")
               }
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onClick={() => { onChange(o); setOpen(false); }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onClick={() => {
+                onChange(o);
+                setOpen(false);
+              }}
             >
               {o}
             </button>

@@ -7,7 +7,9 @@ export async function GET(request: Request) {
   const rawNext = searchParams.get("next") ?? "/overview";
   // Reject protocol-relative (//evil.com) and backslash (/\evil.com) bypasses
   const next =
-    rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.startsWith("/\\")
+    rawNext.startsWith("/") &&
+    !rawNext.startsWith("//") &&
+    !rawNext.startsWith("/\\")
       ? rawNext
       : "/overview";
 

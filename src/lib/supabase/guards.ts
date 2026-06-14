@@ -11,13 +11,17 @@ export async function getAuthUser(): Promise<User | null> {
   return user;
 }
 
-type GuardResult<T> = (T & { error?: never }) | ({ [K in keyof T]?: never } & { error: NextResponse });
+type GuardResult<T> =
+  | (T & { error?: never })
+  | ({ [K in keyof T]?: never } & { error: NextResponse });
 
 /** 401 JSON response unless a session exists. */
 export async function requireAuth(): Promise<GuardResult<{ user: User }>> {
   const user = await getAuthUser();
   if (!user) {
-    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+    return {
+      error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
   }
   return { user };
 }
@@ -27,14 +31,18 @@ export async function requireAuth(): Promise<GuardResult<{ user: User }>> {
  * On success returns the service-role client for writes that must bypass RLS —
  * the anon-key client silently matches zero rows on tables without a write policy.
  */
-export async function requireAdmin(): Promise<GuardResult<{ user: User; adminClient: SupabaseClient }>> {
+export async function requireAdmin(): Promise<
+  GuardResult<{ user: User; adminClient: SupabaseClient }>
+> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+    return {
+      error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
   }
 
   const { data: settings } = await supabase
@@ -44,7 +52,9 @@ export async function requireAdmin(): Promise<GuardResult<{ user: User; adminCli
     .single();
 
   if (settings?.role !== "admin") {
-    return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+    return {
+      error: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+    };
   }
 
   let adminClient: SupabaseClient;
@@ -54,7 +64,7 @@ export async function requireAdmin(): Promise<GuardResult<{ user: User; adminCli
     return {
       error: NextResponse.json(
         { error: "Server is missing SUPABASE_ADMIN_KEY" },
-        { status: 500 }
+        { status: 500 },
       ),
     };
   }

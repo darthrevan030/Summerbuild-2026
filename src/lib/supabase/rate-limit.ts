@@ -12,7 +12,7 @@ export async function enforceRateLimit(
   bucket: string,
   max: number,
   windowSecs: number,
-  opts: { failClosed?: boolean } = {}
+  opts: { failClosed?: boolean } = {},
 ): Promise<Response | null> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("consume_rate_limit", {

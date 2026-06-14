@@ -10,5 +10,5 @@ export const useCurrencies = createCachedListHook<CurrencyRow, string[]>(
   (rows) => {
     const active = rows.filter((c) => c.active).map((c) => c.code);
     return active.length > 0 ? active : null;
-  }
+  },
 );

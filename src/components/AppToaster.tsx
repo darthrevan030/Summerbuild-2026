@@ -18,7 +18,8 @@ export function AppToaster() {
       }}
       style={
         {
-          "--normal-bg": "color-mix(in srgb, var(--bg-elevated) 90%, transparent)",
+          "--normal-bg":
+            "color-mix(in srgb, var(--bg-elevated) 90%, transparent)",
           "--normal-border": "var(--border-subtle)",
           "--normal-text": "var(--text-primary)",
           "--border-radius": "10px",

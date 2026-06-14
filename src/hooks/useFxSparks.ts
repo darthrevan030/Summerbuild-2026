@@ -7,7 +7,7 @@ const SPARK_CACHE: Record<string, number[]> = {};
 
 export function useFxSparks(
   codes: string[],
-  base: string = "SGD"
+  base: string = "SGD",
 ): Record<string, number[]> {
   const [sparks, setSparks] = useState<Record<string, number[]>>(() => {
     const cached: Record<string, number[]> = {};
@@ -21,7 +21,7 @@ export function useFxSparks(
   useEffect(() => {
     if (codes.length === 0) return;
 
-    const missing = codes.filter((c) => !((`${c}_${base}`) in SPARK_CACHE));
+    const missing = codes.filter((c) => !(`${c}_${base}` in SPARK_CACHE));
     if (missing.length === 0) {
       const result: Record<string, number[]> = {};
       for (const c of codes) result[c] = SPARK_CACHE[`${c}_${base}`] ?? [];
@@ -34,12 +34,14 @@ export function useFxSparks(
         fetch(`/api/fx/candles?ccy=${ccy}&base=${base}`)
           .then((r) => r.json())
           .then((d: { closes?: number[] }) => {
-            SPARK_CACHE[`${ccy}_${base}`] = Array.isArray(d.closes) ? d.closes : [];
+            SPARK_CACHE[`${ccy}_${base}`] = Array.isArray(d.closes)
+              ? d.closes
+              : [];
           })
           .catch(() => {
             SPARK_CACHE[`${ccy}_${base}`] = [];
-          })
-      )
+          }),
+      ),
     ).then(() => {
       const result: Record<string, number[]> = {};
       for (const c of codes) result[c] = SPARK_CACHE[`${c}_${base}`] ?? [];

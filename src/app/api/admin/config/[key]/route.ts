@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/guards";
 
-const ALLOWED_KEYS = new Set(["eodhd", "yahoo", "coingecko", "goldapi", "finnhub", "frankfurter", "anthropic"]);
+const ALLOWED_KEYS = new Set([
+  "eodhd",
+  "yahoo",
+  "coingecko",
+  "goldapi",
+  "finnhub",
+  "frankfurter",
+  "anthropic",
+]);
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ key: string }> }
+  { params }: { params: Promise<{ key: string }> },
 ) {
   const { adminClient, user, error: authError } = await requireAdmin();
   if (authError) return authError;
@@ -17,7 +25,10 @@ export async function PATCH(
 
   const { active } = await req.json();
   if (typeof active !== "boolean") {
-    return NextResponse.json({ error: "active must be a boolean" }, { status: 400 });
+    return NextResponse.json(
+      { error: "active must be a boolean" },
+      { status: 400 },
+    );
   }
 
   const { error } = await adminClient
@@ -27,7 +38,10 @@ export async function PATCH(
 
   if (error) {
     console.error("[admin/config] DB error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 
   await adminClient.from("audit_log").insert({

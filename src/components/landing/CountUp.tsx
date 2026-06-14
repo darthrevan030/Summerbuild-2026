@@ -28,13 +28,16 @@ export function CountUp({
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.4 });
   const fromRef = useRef(0);
-  const fmt = format ?? ((v: number) => Math.round(v).toLocaleString() + suffix);
+  const fmt =
+    format ?? ((v: number) => Math.round(v).toLocaleString() + suffix);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const from = fromRef.current;
-    const settle = () => { fromRef.current = to; };
+    const settle = () => {
+      fromRef.current = to;
+    };
 
     if (reduce || (startOnView && !inView)) {
       el.textContent = fmt(startOnView && !inView ? from : to);
@@ -44,13 +47,19 @@ export function CountUp({
     const controls = animate(from, to, {
       duration: durationMs / 1000,
       ease: [0.2, 0.7, 0.2, 1],
-      onUpdate: (v) => { el.textContent = fmt(v); },
+      onUpdate: (v) => {
+        el.textContent = fmt(v);
+      },
     });
     settle();
     return () => controls.stop();
-  // fmt is derived from format/suffix; depend on those instead.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // fmt is derived from format/suffix; depend on those instead.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [to, inView, reduce, startOnView, durationMs, format, suffix]);
 
-  return <span ref={ref} className={"tabular-nums " + className}>{fmt(to)}</span>;
+  return (
+    <span ref={ref} className={"tabular-nums " + className}>
+      {fmt(to)}
+    </span>
+  );
 }

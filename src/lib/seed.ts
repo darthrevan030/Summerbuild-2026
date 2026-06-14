@@ -18,7 +18,9 @@ export const SEED: HoldingRow[] = [
     buyFxRate: 1.3842,
     currentPrice: 213.5,
     currentFxRate: 1.352,
-    sparkData: [136, 129, 142, 151, 148, 160, 171, 168, 182, 190, 186, 199, 205, 213.5],
+    sparkData: [
+      136, 129, 142, 151, 148, 160, 171, 168, 182, 190, 186, 199, 205, 213.5,
+    ],
     createdAt: "2022-08-14T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",
     priceRefreshedAt: null,
@@ -27,7 +29,15 @@ export const SEED: HoldingRow[] = [
     assetGain: 5226,
     fxGain: -218,
     totalPct: 54.2,
-    detail: { buyUnits: 50, buyPx: 136.2, buyDate: "2022-08-14", buyFx: 1.3842, curPx: 213.5, curFx: 1.352, ccy: "USD" },
+    detail: {
+      buyUnits: 50,
+      buyPx: 136.2,
+      buyDate: "2022-08-14",
+      buyFx: 1.3842,
+      curPx: 213.5,
+      curFx: 1.352,
+      ccy: "USD",
+    },
   },
   {
     id: "seed-2",
@@ -46,7 +56,9 @@ export const SEED: HoldingRow[] = [
     buyFxRate: 1.0,
     currentPrice: 1.96,
     currentFxRate: 1.0,
-    sparkData: [1.8, 1.74, 1.69, 1.72, 1.81, 1.88, 1.84, 1.91, 1.95, 1.93, 1.96],
+    sparkData: [
+      1.8, 1.74, 1.69, 1.72, 1.81, 1.88, 1.84, 1.91, 1.95, 1.93, 1.96,
+    ],
     createdAt: "2021-11-03T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",
     priceRefreshedAt: null,
@@ -55,7 +67,15 @@ export const SEED: HoldingRow[] = [
     assetGain: 1280,
     fxGain: 0,
     totalPct: 8.9,
-    detail: { buyUnits: 8000, buyPx: 1.8, buyDate: "2021-11-03", buyFx: 1.0, curPx: 1.96, curFx: 1.0, ccy: "SGD" },
+    detail: {
+      buyUnits: 8000,
+      buyPx: 1.8,
+      buyDate: "2021-11-03",
+      buyFx: 1.0,
+      curPx: 1.96,
+      curFx: 1.0,
+      ccy: "SGD",
+    },
   },
   {
     id: "seed-3",
@@ -83,7 +103,15 @@ export const SEED: HoldingRow[] = [
     assetGain: 11620,
     fxGain: -690,
     totalPct: 23.1,
-    detail: { buyUnits: 200, buyPx: 171.1, buyDate: "2022-02-18", buyFx: 1.369, curPx: 215.4, curFx: 1.352, ccy: "USD" },
+    detail: {
+      buyUnits: 200,
+      buyPx: 171.1,
+      buyDate: "2022-02-18",
+      buyFx: 1.369,
+      curPx: 215.4,
+      curFx: 1.352,
+      ccy: "USD",
+    },
   },
   {
     id: "seed-4",
@@ -102,7 +130,9 @@ export const SEED: HoldingRow[] = [
     buyFxRate: 1.372,
     currentPrice: 2730.0,
     currentFxRate: 1.352,
-    sparkData: [1776, 1810, 1690, 1850, 1920, 2010, 1980, 2150, 2340, 2510, 2680, 2730],
+    sparkData: [
+      1776, 1810, 1690, 1850, 1920, 2010, 1980, 2150, 2340, 2510, 2680, 2730,
+    ],
     createdAt: "2020-09-22T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",
     priceRefreshedAt: null,
@@ -111,7 +141,15 @@ export const SEED: HoldingRow[] = [
     assetGain: 6420,
     fxGain: -270,
     totalPct: 50.0,
-    detail: { buyUnits: 5, buyPx: 1776.0, buyDate: "2020-09-22", buyFx: 1.372, curPx: 2730.0, curFx: 1.352, ccy: "USD" },
+    detail: {
+      buyUnits: 5,
+      buyPx: 1776.0,
+      buyDate: "2020-09-22",
+      buyFx: 1.372,
+      curPx: 2730.0,
+      curFx: 1.352,
+      ccy: "USD",
+    },
   },
   {
     id: "seed-5",
@@ -130,7 +168,10 @@ export const SEED: HoldingRow[] = [
     buyFxRate: 1.0,
     currentPrice: 720000,
     currentFxRate: 1.0,
-    sparkData: [600000, 612000, 628000, 640000, 655000, 668000, 681000, 695000, 702000, 711000, 720000],
+    sparkData: [
+      600000, 612000, 628000, 640000, 655000, 668000, 681000, 695000, 702000,
+      711000, 720000,
+    ],
     createdAt: "2019-06-10T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",
     priceRefreshedAt: null,
@@ -139,24 +180,55 @@ export const SEED: HoldingRow[] = [
     assetGain: 120000,
     fxGain: 0,
     totalPct: 20.0,
-    detail: { buyUnits: 1, buyPx: 600000, buyDate: "2019-06-10", buyFx: 1.0, curPx: 720000, curFx: 1.0, ccy: "SGD" },
+    detail: {
+      buyUnits: 1,
+      buyPx: 600000,
+      buyDate: "2019-06-10",
+      buyFx: 1.0,
+      curPx: 720000,
+      curFx: 1.0,
+      ccy: "SGD",
+    },
   },
 ];
 
-const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MON = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
-export function generatePortfolioSeries(total: number): { label: string; v: number }[] {
+export function generatePortfolioSeries(
+  total: number,
+): { label: string; v: number }[] {
   const start = 1031000;
   const series: { label: string; v: number }[] = [];
-  let yr = 2023, mo = 0;
+  let yr = 2023,
+    mo = 0;
   for (let i = 0; i < 42; i++) {
     const t = i / 41;
-    const trend = start + (total - start) * (t * 0.55 + Math.pow(t, 1.7) * 0.45);
-    const wob = Math.sin(i * 0.7) * 11000 + Math.sin(i * 1.9 + 1) * 6000 + Math.sin(i * 0.33) * 8000;
+    const trend =
+      start + (total - start) * (t * 0.55 + Math.pow(t, 1.7) * 0.45);
+    const wob =
+      Math.sin(i * 0.7) * 11000 +
+      Math.sin(i * 1.9 + 1) * 6000 +
+      Math.sin(i * 0.33) * 8000;
     const v = Math.round((trend + wob) / 100) * 100;
     series.push({ label: `${MON[mo]} ${String(yr).slice(2)}`, v });
     mo++;
-    if (mo > 11) { mo = 0; yr++; }
+    if (mo > 11) {
+      mo = 0;
+      yr++;
+    }
   }
   series[series.length - 1].v = Math.round(total);
   return series;

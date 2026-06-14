@@ -40,7 +40,17 @@ interface PortfolioContextValue {
 }
 
 interface ProviderProps {
-  value: Omit<PortfolioContextValue, "displayName" | "baseCurrency" | "role" | "setDisplayName" | "setBaseCurrency" | "toBase" | "fmtVal" | "fmtSigned"> & {
+  value: Omit<
+    PortfolioContextValue,
+    | "displayName"
+    | "baseCurrency"
+    | "role"
+    | "setDisplayName"
+    | "setBaseCurrency"
+    | "toBase"
+    | "fmtVal"
+    | "fmtSigned"
+  > & {
     initialDisplayName: string;
     initialBaseCurrency: string;
     initialRole: string;
@@ -60,17 +70,17 @@ export function PortfolioProvider({ value, children }: ProviderProps) {
       const rate = value.baseFxRates[baseCurrency] ?? 1;
       return sgdVal / rate;
     },
-    [baseCurrency, value.baseFxRates]
+    [baseCurrency, value.baseFxRates],
   );
 
   const fmtVal = useCallback(
     (sgdVal: number) => ccyFmt(toBase(sgdVal), baseCurrency),
-    [toBase, baseCurrency]
+    [toBase, baseCurrency],
   );
 
   const fmtSigned = useCallback(
     (sgdVal: number) => ccySigned(toBase(sgdVal), baseCurrency),
-    [toBase, baseCurrency]
+    [toBase, baseCurrency],
   );
 
   const ctx: PortfolioContextValue = {
@@ -85,11 +95,16 @@ export function PortfolioProvider({ value, children }: ProviderProps) {
     fmtSigned,
   };
 
-  return <PortfolioContext.Provider value={ctx}>{children}</PortfolioContext.Provider>;
+  return (
+    <PortfolioContext.Provider value={ctx}>
+      {children}
+    </PortfolioContext.Provider>
+  );
 }
 
 export function usePortfolio(): PortfolioContextValue {
   const ctx = useContext(PortfolioContext);
-  if (!ctx) throw new Error("usePortfolio must be used within PortfolioProvider");
+  if (!ctx)
+    throw new Error("usePortfolio must be used within PortfolioProvider");
   return ctx;
 }

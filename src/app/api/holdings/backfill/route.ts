@@ -8,7 +8,12 @@ export const maxDuration = 60;
 
 const EODHD_KEY = process.env.EODHD_API_KEY ?? "";
 
-const EODHD_CODE_REMAP: Record<string, string> = { SG: "SI", HKEX: "HK", ASX: "AU", MI: "MI" };
+const EODHD_CODE_REMAP: Record<string, string> = {
+  SG: "SI",
+  HKEX: "HK",
+  ASX: "AU",
+  MI: "MI",
+};
 
 function normalizeEohdTicker(ticker: string): string {
   if (!ticker.includes(".")) return ticker;
@@ -16,8 +21,13 @@ function normalizeEohdTicker(ticker: string): string {
   return `${sym}.${EODHD_CODE_REMAP[exc] ?? exc}`;
 }
 
-async function fetchEohdHistory(symbol: string, from: string, to: string): Promise<Record<string, number>> {
-  if (!EODHD_KEY || EODHD_KEY.startsWith("YOUR_") || EODHD_KEY === "demo") return {};
+async function fetchEohdHistory(
+  symbol: string,
+  from: string,
+  to: string,
+): Promise<Record<string, number>> {
+  if (!EODHD_KEY || EODHD_KEY.startsWith("YOUR_") || EODHD_KEY === "demo")
+    return {};
   const url = `https://eodhd.com/api/eod/${symbol}?from=${from}&to=${to}&fmt=json&api_token=${EODHD_KEY}`;
   try {
     const r = await fetch(url, { next: { revalidate: 0 } });
@@ -32,20 +42,22 @@ async function fetchEohdHistory(symbol: string, from: string, to: string): Promi
 async function fetchFxHistory(
   currencies: string[],
   from: string,
-  to: string
+  to: string,
 ): Promise<Record<string, Record<string, number>>> {
   const foreign = currencies.filter((c) => c !== "SGD");
   if (foreign.length === 0) return {};
   try {
     const r = await fetch(
       `https://api.frankfurter.app/${from}..${to}?from=SGD&to=${foreign.join(",")}`,
-      { next: { revalidate: 0 } }
+      { next: { revalidate: 0 } },
     );
     if (!r.ok) return {};
     const data = await r.json();
     // Frankfurter returns foreign-per-SGD; invert to get SGD-per-foreign
     const result: Record<string, Record<string, number>> = {};
-    for (const [date, rates] of Object.entries(data.rates as Record<string, Record<string, number>>)) {
+    for (const [date, rates] of Object.entries(
+      data.rates as Record<string, Record<string, number>>,
+    )) {
       result[date] = {};
       for (const [ccy, rate] of Object.entries(rates)) {
         result[date][ccy] = 1 / (rate as number);
@@ -69,7 +81,11 @@ function dateRange(from: string, to: string): string[] {
 }
 
 // Fill forward: carry last known value across gaps (weekends, holidays)
-function fillForward(dates: string[], sparse: Record<string, number>, seed: number): Record<string, number> {
+function fillForward(
+  dates: string[],
+  sparse: Record<string, number>,
+  seed: number,
+): Record<string, number> {
   const out: Record<string, number> = {};
   let last = seed;
   for (const d of dates) {
@@ -84,10 +100,14 @@ export async function POST() {
   if (authError) return authError;
 
   const holdings = await fetchHoldings(user.id);
-  if (holdings.length === 0) return NextResponse.json({ inserted: 0, skipped: 0 });
+  if (holdings.length === 0)
+    return NextResponse.json({ inserted: 0, skipped: 0 });
 
   const today = new Date().toISOString().slice(0, 10);
-  const from = holdings.reduce((min, h) => (h.buyDate < min ? h.buyDate : min), holdings[0].buyDate);
+  const from = holdings.reduce(
+    (min, h) => (h.buyDate < min ? h.buyDate : min),
+    holdings[0].buyDate,
+  );
   const allDates = dateRange(from, today);
 
   // Skip dates that already have snapshots — use the paginated fetch so the
@@ -96,22 +116,35 @@ export async function POST() {
   const existingDates = new Set(existingSnapshots.map((s) => s.recordedDate));
 
   const missingDates = allDates.filter((d) => !existingDates.has(d));
-  if (missingDates.length === 0) return NextResponse.json({ inserted: 0, skipped: existingDates.size });
+  if (missingDates.length === 0)
+    return NextResponse.json({ inserted: 0, skipped: existingDates.size });
 
   // Unique exchange-listed tickers (not physical "—")
-  const equityTickers = [...new Set(
-    holdings.filter((h) => h.ticker !== "—").map((h) => h.ticker)
-  )];
-  const currencies = [...new Set(holdings.map((h) => h.currency).filter((c) => c !== "SGD"))];
+  const equityTickers = [
+    ...new Set(holdings.filter((h) => h.ticker !== "—").map((h) => h.ticker)),
+  ];
+  const currencies = [
+    ...new Set(holdings.map((h) => h.currency).filter((c) => c !== "SGD")),
+  ];
 
   const providers = await getProviderFlags();
 
   // Fetch all historical prices in parallel (one call per ticker)
   const [rawPrices, rawFx] = await Promise.all([
     providers.eodhd
-      ? Promise.all(equityTickers.map(async (t) => [t, await fetchEohdHistory(normalizeEohdTicker(t), from, today)] as const)).then(Object.fromEntries)
+      ? Promise.all(
+          equityTickers.map(
+            async (t) =>
+              [
+                t,
+                await fetchEohdHistory(normalizeEohdTicker(t), from, today),
+              ] as const,
+          ),
+        ).then(Object.fromEntries)
       : Promise.resolve(Object.fromEntries(equityTickers.map((t) => [t, {}]))),
-    providers.frankfurter ? fetchFxHistory(currencies, from, today) : Promise.resolve({} as Record<string, Record<string, number>>),
+    providers.frankfurter
+      ? fetchFxHistory(currencies, from, today)
+      : Promise.resolve({} as Record<string, Record<string, number>>),
   ]);
 
   // Build fill-forward price maps per ticker
@@ -152,17 +185,21 @@ export async function POST() {
     const active = holdings.filter((h) => h.buyDate <= date);
     if (active.length === 0) continue;
 
-    let valueSgd = 0, costSgd = 0, fxImpactSgd = 0;
+    let valueSgd = 0,
+      costSgd = 0,
+      fxImpactSgd = 0;
     const fxByCurrency: Record<string, number> = {};
 
     for (const h of active) {
-      const histPrice = h.ticker === "—"
-        ? h.buyPrice
-        : (prices[h.ticker]?.[date] ?? h.buyPrice);
-      const histFxRate = h.currency === "SGD" ? 1 : (fx[date]?.[h.currency] ?? h.buyFxRate);
+      const histPrice =
+        h.ticker === "—"
+          ? h.buyPrice
+          : (prices[h.ticker]?.[date] ?? h.buyPrice);
+      const histFxRate =
+        h.currency === "SGD" ? 1 : (fx[date]?.[h.currency] ?? h.buyFxRate);
 
-      valueSgd  += h.units * histPrice * histFxRate;
-      costSgd   += h.units * h.buyPrice * h.buyFxRate;
+      valueSgd += h.units * histPrice * histFxRate;
+      costSgd += h.units * h.buyPrice * h.buyFxRate;
 
       if (h.currency !== "SGD") {
         const impact = h.units * h.buyPrice * (histFxRate - h.buyFxRate);
@@ -182,7 +219,8 @@ export async function POST() {
     });
   }
 
-  if (rows.length === 0) return NextResponse.json({ inserted: 0, skipped: existingDates.size });
+  if (rows.length === 0)
+    return NextResponse.json({ inserted: 0, skipped: existingDates.size });
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -191,8 +229,14 @@ export async function POST() {
 
   if (error) {
     console.error("[holdings/backfill] DB error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 
-  return NextResponse.json({ inserted: rows.length, skipped: existingDates.size });
+  return NextResponse.json({
+    inserted: rows.length,
+    skipped: existingDates.size,
+  });
 }

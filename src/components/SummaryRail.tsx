@@ -22,7 +22,9 @@ export function SummaryRail() {
             {top && (
               <div>
                 <div className={LABEL}>{top.label}</div>
-                <div className="font-mono text-[19px] font-semibold tracking-[-.02em]">{top.value}%</div>
+                <div className="font-mono text-[19px] font-semibold tracking-[-.02em]">
+                  {top.value}%
+                </div>
               </div>
             )}
           </Donut>
@@ -35,18 +37,56 @@ export function SummaryRail() {
       <div className="flex flex-col gap-3.5">
         <div className="flex flex-col gap-0.5">
           <span className={LABEL}>Total Gain</span>
-          <span className="font-mono text-[17px] font-semibold max-bp480:text-[15px]" style={{ color: hero.totalGain >= 0 ? "var(--gain)" : "var(--loss)" }}>{fmtSigned(hero.totalGain)}</span>
-          <span className="font-mono text-xs" style={{ color: hero.totalGain >= 0 ? "var(--gain)" : "var(--loss)" }}>{pct(hero.totalGainPct)}</span>
+          <span
+            className="font-mono text-[17px] font-semibold max-bp480:text-[15px]"
+            style={{
+              color: hero.totalGain >= 0 ? "var(--gain)" : "var(--loss)",
+            }}
+          >
+            {fmtSigned(hero.totalGain)}
+          </span>
+          <span
+            className="font-mono text-xs"
+            style={{
+              color: hero.totalGain >= 0 ? "var(--gain)" : "var(--loss)",
+            }}
+          >
+            {pct(hero.totalGainPct)}
+          </span>
         </div>
         <div className="flex flex-col gap-0.5">
           <span className={LABEL}>FX Impact</span>
-          <span className="font-mono text-[17px] font-semibold max-bp480:text-[15px]" style={{ color: fxUp ? "var(--fx-positive)" : "var(--fx-negative)" }}>{fmtSigned(hero.fxImpact)}</span>
-          <span className="font-mono text-xs" style={{ color: fxUp ? "var(--fx-positive)" : "var(--fx-negative)" }}>{pct(hero.fxPct)}</span>
+          <span
+            className="font-mono text-[17px] font-semibold max-bp480:text-[15px]"
+            style={{
+              color: fxUp ? "var(--fx-positive)" : "var(--fx-negative)",
+            }}
+          >
+            {fmtSigned(hero.fxImpact)}
+          </span>
+          <span
+            className="font-mono text-xs"
+            style={{
+              color: fxUp ? "var(--fx-positive)" : "var(--fx-negative)",
+            }}
+          >
+            {pct(hero.fxPct)}
+          </span>
         </div>
         <div className="flex flex-col gap-0.5">
           <span className={LABEL}>Today</span>
-          <span className="font-mono text-[17px] font-semibold max-bp480:text-[15px]" style={{ color: dayUp ? "var(--gain)" : "var(--loss)" }}>{fmtSigned(hero.dayChange)}</span>
-          <span className="font-mono text-xs" style={{ color: dayUp ? "var(--gain)" : "var(--loss)" }}>{pct(hero.dayPct)}</span>
+          <span
+            className="font-mono text-[17px] font-semibold max-bp480:text-[15px]"
+            style={{ color: dayUp ? "var(--gain)" : "var(--loss)" }}
+          >
+            {fmtSigned(hero.dayChange)}
+          </span>
+          <span
+            className="font-mono text-xs"
+            style={{ color: dayUp ? "var(--gain)" : "var(--loss)" }}
+          >
+            {pct(hero.dayPct)}
+          </span>
         </div>
       </div>
 
@@ -54,7 +94,8 @@ export function SummaryRail() {
       <div className="flex items-center justify-between">
         <span className={LABEL}>Updated {hero.updated}</span>
         <span className="flex items-center gap-1.5 text-[11px] text-secondary">
-          <i className="size-1.5 rounded-full bg-gain animate-pulse-dot" />live
+          <i className="size-1.5 rounded-full bg-gain animate-pulse-dot" />
+          live
         </span>
       </div>
     </aside>

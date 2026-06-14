@@ -20,10 +20,22 @@ const MAX = 0.92;
 const clamp = (v: number) => Math.min(MAX, Math.max(MIN, v));
 const fmt = (v: number) => "S$" + Math.round(v).toLocaleString("en-SG");
 
-function MotionNumber({ mv, className = "" }: { mv: MotionValue<number>; className?: string }) {
+function MotionNumber({
+  mv,
+  className = "",
+}: {
+  mv: MotionValue<number>;
+  className?: string;
+}) {
   const ref = useRef<HTMLSpanElement>(null);
-  useMotionValueEvent(mv, "change", (v) => { if (ref.current) ref.current.textContent = fmt(v); });
-  return <span ref={ref} className={"font-mono tabular-nums " + className}>{fmt(mv.get())}</span>;
+  useMotionValueEvent(mv, "change", (v) => {
+    if (ref.current) ref.current.textContent = fmt(v);
+  });
+  return (
+    <span ref={ref} className={"font-mono tabular-nums " + className}>
+      {fmt(mv.get())}
+    </span>
+  );
 }
 
 export function HeroFxSplit() {
@@ -37,9 +49,15 @@ export function HeroFxSplit() {
   const springSplit = useSpring(split, SPRING_SMOOTH);
 
   const assetW = useTransform(springSplit, (v) => `${(v * 100).toFixed(2)}%`);
-  const fxW = useTransform(springSplit, (v) => `${((1 - v) * 100).toFixed(2)}%`);
+  const fxW = useTransform(
+    springSplit,
+    (v) => `${((1 - v) * 100).toFixed(2)}%`,
+  );
   const assetGain = useTransform(springSplit, (v) => Math.round(TOTAL * v));
-  const fxGain = useTransform(springSplit, (v) => TOTAL - Math.round(TOTAL * v));
+  const fxGain = useTransform(
+    springSplit,
+    (v) => TOTAL - Math.round(TOTAL * v),
+  );
 
   // verdict / aria — update only on integer-percent change
   useMotionValueEvent(springSplit, "change", (v) => {
@@ -48,7 +66,10 @@ export function HeroFxSplit() {
   });
 
   // ── scroll demo (only until the user engages) ──
-  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start 0.85", "end 0.4"] });
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start 0.85", "end 0.4"],
+  });
   const demo = useTransform(scrollYProgress, [0, 0.5, 1], [0.62, 0.4, 0.62]);
   useMotionValueEvent(demo, "change", (v) => {
     if (!engagedRef.current && !reduce) split.set(v);
@@ -76,8 +97,10 @@ export function HeroFxSplit() {
   function onKeyDown(e: React.KeyboardEvent) {
     const step = e.shiftKey ? 0.1 : 0.02;
     let next: number | null = null;
-    if (e.key === "ArrowLeft" || e.key === "ArrowDown") next = clamp(split.get() - step);
-    if (e.key === "ArrowRight" || e.key === "ArrowUp") next = clamp(split.get() + step);
+    if (e.key === "ArrowLeft" || e.key === "ArrowDown")
+      next = clamp(split.get() - step);
+    if (e.key === "ArrowRight" || e.key === "ArrowUp")
+      next = clamp(split.get() + step);
     if (next !== null) {
       e.preventDefault();
       engagedRef.current = true;
@@ -95,8 +118,13 @@ export function HeroFxSplit() {
 
       <div className="rounded-2xl border border-subtle bg-surface/80 p-7 shadow-[0_40px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur-xl max-bp480:p-5">
         <p className="font-ui text-[15px] leading-relaxed text-secondary">
-          Your <span className="font-mono font-semibold text-gain">+{fmt(TOTAL)}</span> gain
-          {" — "}how much is <span className="italic text-primary">actually</span> real?
+          Your{" "}
+          <span className="font-mono font-semibold text-gain">
+            +{fmt(TOTAL)}
+          </span>{" "}
+          gain
+          {" — "}how much is{" "}
+          <span className="italic text-primary">actually</span> real?
         </p>
 
         {/* split track */}
@@ -135,25 +163,37 @@ export function HeroFxSplit() {
           {/* labels */}
           <div className="mt-5 flex items-end justify-between">
             <div>
-              <div className="text-[10.5px] font-semibold uppercase tracking-[.14em] text-muted">Your asset</div>
-              <MotionNumber mv={assetGain} className="mt-1 block text-[19px] font-semibold text-gain" />
+              <div className="text-[10.5px] font-semibold uppercase tracking-[.14em] text-muted">
+                Your asset
+              </div>
+              <MotionNumber
+                mv={assetGain}
+                className="mt-1 block text-[19px] font-semibold text-gain"
+              />
             </div>
             <div className="text-right">
-              <div className="text-[10.5px] font-semibold uppercase tracking-[.14em] text-muted">The currency</div>
-              <MotionNumber mv={fxGain} className="mt-1 block text-[19px] font-semibold text-fx-up" />
+              <div className="text-[10.5px] font-semibold uppercase tracking-[.14em] text-muted">
+                The currency
+              </div>
+              <MotionNumber
+                mv={fxGain}
+                className="mt-1 block text-[19px] font-semibold text-fx-up"
+              />
             </div>
           </div>
 
           <div className="mt-6 border-t border-subtle pt-4 font-ui text-[13px] text-secondary">
-            <span className="font-semibold text-gain">{assetPct}%</span> your asset
+            <span className="font-semibold text-gain">{assetPct}%</span> your
+            asset
             <span className="mx-2 text-muted">·</span>
-            <span className="font-semibold text-fx-up">{fxPct}%</span> the currency
+            <span className="font-semibold text-fx-up">{fxPct}%</span> the
+            currency
           </div>
         </div>
 
         <p className="mt-5 font-ui text-[12px] leading-relaxed text-muted">
-          Drag the handle — the FX Lab decomposes every position like this, so a weak
-          dollar never masquerades as a winning stock.
+          Drag the handle — the FX Lab decomposes every position like this, so a
+          weak dollar never masquerades as a winning stock.
         </p>
       </div>
     </div>

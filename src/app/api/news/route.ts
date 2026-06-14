@@ -3,8 +3,10 @@ import { requireAuth } from "@/lib/supabase/guards";
 import { enforceRateLimit } from "@/lib/supabase/rate-limit";
 import { getProviderFlags } from "@/lib/supabase/app-config";
 
-const POS = /\b(surge|beat|record|gain|rise|profit|growth|upgrade|strong|soar|exceed|higher|boost|rally|outperform|rebound)\b/i;
-const NEG = /\b(fall|miss|cut|loss|drop|plunge|downgrade|weak|decline|warn|disappoint|tumble|slide|concern|risk|below|slump)\b/i;
+const POS =
+  /\b(surge|beat|record|gain|rise|profit|growth|upgrade|strong|soar|exceed|higher|boost|rally|outperform|rebound)\b/i;
+const NEG =
+  /\b(fall|miss|cut|loss|drop|plunge|downgrade|weak|decline|warn|disappoint|tumble|slide|concern|risk|below|slump)\b/i;
 
 function tag(headline: string): "pos" | "neg" | "neu" {
   return POS.test(headline) ? "pos" : NEG.test(headline) ? "neg" : "neu";
@@ -19,19 +21,19 @@ function ago(unixSec: number): string {
 
 // EODHD exchange suffix → Finnhub exchange prefix
 const EODHD_TO_FINNHUB: Record<string, string> = {
-  US:    "",       // US stocks use bare ticker
-  LSE:   "LSE:",
-  TSE:   "TSE:",
-  HKEX:  "HKEX:",
-  NSE:   "NSE:",
-  BSE:   "BSE:",
-  SG:    "SGX:",
-  ASX:   "ASX:",
+  US: "", // US stocks use bare ticker
+  LSE: "LSE:",
+  TSE: "TSE:",
+  HKEX: "HKEX:",
+  NSE: "NSE:",
+  BSE: "BSE:",
+  SG: "SGX:",
+  ASX: "ASX:",
   XETRA: "XETRA:",
-  PA:    "EPA:",
-  MI:    "BIT:",
-  SHG:   "SHG:",
-  SHE:   "SHE:",
+  PA: "EPA:",
+  MI: "BIT:",
+  SHG: "SHG:",
+  SHE: "SHE:",
 };
 
 /** Convert EODHD ticker format (VWRA.LSE) to Finnhub format (LSE:VWRA). */
@@ -57,13 +59,15 @@ export async function GET(req: NextRequest) {
   if (!enabled) return Response.json([]);
 
   const symbol = req.nextUrl.searchParams.get("symbol");
-  if (!symbol) return Response.json({ error: "symbol required" }, { status: 400 });
+  if (!symbol)
+    return Response.json({ error: "symbol required" }, { status: 400 });
   if (!SYMBOL_RE.test(symbol))
     return Response.json({ error: "invalid symbol format" }, { status: 400 });
 
   const key = process.env.FINNHUB_API_KEY;
   // Return a special sentinel so the client knows the API is offline (vs. no results)
-  if (!key || key.startsWith("placeholder")) return Response.json({ noKey: true }, { status: 200 });
+  if (!key || key.startsWith("placeholder"))
+    return Response.json({ noKey: true }, { status: 200 });
 
   const finnhubSymbol = toFinnhubNews(symbol);
   const to = new Date();
@@ -73,7 +77,7 @@ export async function GET(req: NextRequest) {
   try {
     const res = await fetch(
       `https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(finnhubSymbol)}&from=${fmt(from)}&to=${fmt(to)}&token=${key}`,
-      { next: { revalidate: 900 } }
+      { next: { revalidate: 900 } },
     );
     if (!res.ok) return Response.json([]);
 
@@ -83,8 +87,13 @@ export async function GET(req: NextRequest) {
     const items = news
       .slice(0, 5)
       .map((n: { headline?: string; source?: string; datetime?: number }) => ({
-        t: String(n.headline ?? "").trim().slice(0, 120),
-        src: String(n.source ?? "").split(" ").slice(0, 2).join(" "),
+        t: String(n.headline ?? "")
+          .trim()
+          .slice(0, 120),
+        src: String(n.source ?? "")
+          .split(" ")
+          .slice(0, 2)
+          .join(" "),
         sent: tag(String(n.headline ?? "")),
         ago: ago(Number(n.datetime ?? 0)),
       }))

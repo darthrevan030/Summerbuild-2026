@@ -1,5 +1,14 @@
-import { fetchHoldings, updateHoldingPrice, recordSnapshot } from "@/lib/supabase/data";
-import { fetchLivePrices, fetchLiveFxRates, fetchCryptoSparks, fetchEquitySparks } from "@/lib/prices";
+import {
+  fetchHoldings,
+  updateHoldingPrice,
+  recordSnapshot,
+} from "@/lib/supabase/data";
+import {
+  fetchLivePrices,
+  fetchLiveFxRates,
+  fetchCryptoSparks,
+  fetchEquitySparks,
+} from "@/lib/prices";
 import { requireAuth } from "@/lib/supabase/guards";
 import { enforceRateLimit } from "@/lib/supabase/rate-limit";
 import { getProviderFlags } from "@/lib/supabase/app-config";
@@ -28,38 +37,50 @@ export async function POST() {
   }
 
   // Unique non-placeholder tickers + their currencies for exchange resolution
-  const tickers = [...new Set(stale.map((h) => h.ticker).filter((t) => t !== "—"))];
+  const tickers = [
+    ...new Set(stale.map((h) => h.ticker).filter((t) => t !== "—")),
+  ];
   const tickerCurrency = Object.fromEntries(
-    stale.filter((h) => h.ticker !== "—").map((h) => [h.ticker, h.currency])
+    stale.filter((h) => h.ticker !== "—").map((h) => [h.ticker, h.currency]),
   );
 
   const providers = await getProviderFlags();
 
-  const [livePrices, liveFxRates, cryptoSparks, equitySparks] = await Promise.all([
-    fetchLivePrices(tickers, tickerCurrency, providers),
-    providers.frankfurter ? fetchLiveFxRates() : Promise.resolve({} as Record<string, number>),
-    providers.coingecko ? fetchCryptoSparks(tickers) : Promise.resolve({} as Record<string, number[]>),
-    providers.finnhub ? fetchEquitySparks(tickers, tickerCurrency) : Promise.resolve({} as Record<string, number[]>),
-  ]);
+  const [livePrices, liveFxRates, cryptoSparks, equitySparks] =
+    await Promise.all([
+      fetchLivePrices(tickers, tickerCurrency, providers),
+      providers.frankfurter
+        ? fetchLiveFxRates()
+        : Promise.resolve({} as Record<string, number>),
+      providers.coingecko
+        ? fetchCryptoSparks(tickers)
+        : Promise.resolve({} as Record<string, number[]>),
+      providers.finnhub
+        ? fetchEquitySparks(tickers, tickerCurrency)
+        : Promise.resolve({} as Record<string, number[]>),
+    ]);
 
   await Promise.all(
     stale.map((h) => {
       const newPrice = livePrices[h.ticker];
-      const newFx    = h.currency === "SGD" ? 1 : liveFxRates[h.currency];
+      const newFx = h.currency === "SGD" ? 1 : liveFxRates[h.currency];
       const sparkData = cryptoSparks[h.ticker] ?? equitySparks[h.ticker];
       return updateHoldingPrice(
         h.id,
         newPrice && newPrice > 0 ? newPrice : h.currentPrice,
-        newFx    && newFx    > 0 ? newFx    : h.currentFxRate,
+        newFx && newFx > 0 ? newFx : h.currentFxRate,
         user.id,
         sparkData,
       );
-    })
+    }),
   );
 
   // Re-fetch after updates to get fresh derived values, then snapshot
   const fresh = await fetchHoldings(user.id);
   await recordSnapshot(user.id, fresh);
 
-  return Response.json({ refreshed: stale.length, skipped: holdings.length - stale.length });
+  return Response.json({
+    refreshed: stale.length,
+    skipped: holdings.length - stale.length,
+  });
 }

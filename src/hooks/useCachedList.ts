@@ -11,7 +11,7 @@ import { useState, useEffect } from "react";
 export function createCachedListHook<Row, Out>(
   url: string,
   initial: Out,
-  select: (rows: Row[]) => Out | null
+  select: (rows: Row[]) => Out | null,
 ): () => Out {
   let cache: Out | null = null;
 

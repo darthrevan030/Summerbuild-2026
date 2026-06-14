@@ -1,6 +1,14 @@
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
-  const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16);
+  const n = parseInt(
+    h.length === 3
+      ? h
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : h,
+    16,
+  );
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
@@ -14,7 +22,7 @@ export function applyAccent(hex: string): void {
   root.style.setProperty("--gold", hex);
   root.style.setProperty("--gold-dim", hexA(hex, 0.72));
   root.style.setProperty("--border-gold", hexA(hex, 0.34));
-  root.style.setProperty("--accent-wash", hexA(hex, 0.10));
+  root.style.setProperty("--accent-wash", hexA(hex, 0.1));
   root.style.setProperty("--accent-tint", hexA(hex, 0.16));
   root.style.setProperty("--accent-glow", hexA(hex, 0.22));
 }

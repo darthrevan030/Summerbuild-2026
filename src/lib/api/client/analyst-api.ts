@@ -2,8 +2,17 @@
 // Typed client for /api/analyst. Parses SSE with JSON envelopes:
 //   {type:"text",text} | {type:"done",stopReason} | {type:"error"}
 
-export interface SentimentAsset { id: string; name: string; type: string; delta: number | null }
-export interface AskHolding { name: string; assetType: string; totalPct: number }
+export interface SentimentAsset {
+  id: string;
+  name: string;
+  type: string;
+  delta: number | null;
+}
+export interface AskHolding {
+  name: string;
+  assetType: string;
+  totalPct: number;
+}
 
 export interface StreamResult {
   text: string;
@@ -17,7 +26,7 @@ type AnalystBody =
 async function streamAnalyst(
   body: AnalystBody,
   onText?: (chunk: string) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<StreamResult> {
   const res = await fetch("/api/analyst", {
     method: "POST",
@@ -77,7 +86,7 @@ async function streamAnalyst(
 /** Sentiment scan: accumulates the full JSON response. */
 export function streamSentiment(
   assets: SentimentAsset[],
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<StreamResult> {
   return streamAnalyst({ mode: "sentiment", assets }, undefined, signal);
 }
@@ -88,7 +97,11 @@ export function streamAsk(
   holdings: AskHolding[],
   totalSGD: number,
   onText: (chunk: string) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<StreamResult> {
-  return streamAnalyst({ mode: "ask", question, holdings, totalSGD }, onText, signal);
+  return streamAnalyst(
+    { mode: "ask", question, holdings, totalSGD },
+    onText,
+    signal,
+  );
 }

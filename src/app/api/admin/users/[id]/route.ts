@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/supabase/guards";
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { adminClient, user, error: authError } = await requireAdmin();
   if (authError) return authError;
@@ -25,7 +25,7 @@ export async function PATCH(
     if ((count ?? 0) <= 1) {
       return NextResponse.json(
         { error: "Cannot remove the last admin" },
-        { status: 409 }
+        { status: 409 },
       );
     }
   }
@@ -40,11 +40,14 @@ export async function PATCH(
     if (error.message.includes("cannot demote the last admin")) {
       return NextResponse.json(
         { error: "Cannot remove the last admin" },
-        { status: 409 }
+        { status: 409 },
       );
     }
     console.error("[admin/users] DB error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 
   if (!data?.length) {

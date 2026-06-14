@@ -5,7 +5,11 @@ import { createClient } from "@/lib/supabase/server";
  * Builds a GET handler that lists a reference table ordered by display_order,
  * returning `fallback` whenever the table is unreachable (pre-setup DBs).
  */
-export function createTableListGET<Row>(table: string, columns: string, fallback: Row[]) {
+export function createTableListGET<Row>(
+  table: string,
+  columns: string,
+  fallback: Row[],
+) {
   return async function GET() {
     try {
       const supabase = await createClient();

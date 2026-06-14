@@ -46,10 +46,26 @@ const FEATURES: {
     wide: true,
     visual: "stream",
   },
-  { icon: "layers", title: "Everything you own", copy: "Stocks, ETFs, REITs, crypto, gold and property — six asset classes, one table, one number that means something." },
-  { icon: "refresh", title: "Live prices", copy: "On-demand refresh across global equities, CoinGecko and gold spot, with a smart cache that never hammers the APIs." },
-  { icon: "bar-chart", title: "Charts that answer", copy: "Value over time, allocation donuts, per-holding sparklines and custom date ranges — built to settle arguments with yourself." },
-  { icon: "landmark", title: "Private by design", copy: "CSV import in, CSV backup out. Everything lives in your own Supabase project — your data never feeds anyone else's model." },
+  {
+    icon: "layers",
+    title: "Everything you own",
+    copy: "Stocks, ETFs, REITs, crypto, gold and property — six asset classes, one table, one number that means something.",
+  },
+  {
+    icon: "refresh",
+    title: "Live prices",
+    copy: "On-demand refresh across global equities, CoinGecko and gold spot, with a smart cache that never hammers the APIs.",
+  },
+  {
+    icon: "bar-chart",
+    title: "Charts that answer",
+    copy: "Value over time, allocation donuts, per-holding sparklines and custom date ranges — built to settle arguments with yourself.",
+  },
+  {
+    icon: "landmark",
+    title: "Private by design",
+    copy: "CSV import in, CSV backup out. Everything lives in your own Supabase project — your data never feeds anyone else's model.",
+  },
 ];
 
 const NUMBERS = [
@@ -72,7 +88,6 @@ export default function LandingPage() {
         {/* ───────────────────────────── hero ───────────────────────────── */}
         <section className="mx-auto max-w-[1140px] px-6 pb-20 pt-36 md:pt-44">
           <div className="flex flex-col items-center text-center lg:flex-row lg:items-start lg:gap-16 lg:text-left">
-
             {/* Left column — copy */}
             <div className="lg:flex-1 lg:pt-4">
               <Reveal>
@@ -89,15 +104,19 @@ export default function LandingPage() {
               <Reveal delay={120}>
                 <p className="mx-auto mt-7 max-w-[52ch] font-ui text-[17px] leading-[1.65] text-secondary lg:mx-0">
                   Track stocks, ETFs, crypto, gold and property across 30 global
-                  exchanges — live prices, FX-aware P&amp;L and AI analysis. Your
-                  data stays in your own database.
+                  exchanges — live prices, FX-aware P&amp;L and AI analysis.
+                  Your data stays in your own database.
                 </p>
               </Reveal>
 
               <Reveal delay={200}>
                 <div className="mt-10 flex flex-wrap items-center justify-center gap-3.5 lg:justify-start">
-                  <a href="/login" className={CTA_PILL}>Get Started</a>
-                  <a href="#fxsplit" className={CTA_GHOST}>See what&rsquo;s inside&ensp;↓</a>
+                  <a href="/login" className={CTA_PILL}>
+                    Get Started
+                  </a>
+                  <a href="#fxsplit" className={CTA_GHOST}>
+                    See what&rsquo;s inside&ensp;↓
+                  </a>
                 </div>
               </Reveal>
 
@@ -113,7 +132,6 @@ export default function LandingPage() {
                 <LiveTerminal />
               </Reveal>
             </div>
-
           </div>
 
           {/* LiveTerminal visible on mobile/tablet below the fold */}
@@ -125,28 +143,42 @@ export default function LandingPage() {
         </section>
 
         {/* ─────────────────────────── features ─────────────────────────── */}
-        <section id="features" className="mx-auto max-w-[1140px] scroll-mt-20 px-6 py-24 md:py-36">
+        <section
+          id="features"
+          className="mx-auto max-w-[1140px] scroll-mt-20 px-6 py-24 md:py-36"
+        >
           <Reveal>
-            <div className="text-[11px] font-semibold uppercase tracking-[.16em] text-gold">Capabilities</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[.16em] text-gold">
+              Capabilities
+            </div>
             <h2 className="mt-4 max-w-[640px] font-serif text-[clamp(34px,4.5vw,54px)] leading-[1.08] text-primary">
               Know what&rsquo;s working. And&nbsp;why.
             </h2>
             <p className="mt-5 max-w-[52ch] font-ui text-[15px] leading-[1.65] text-secondary">
               A portfolio is more than a list of tickers. It&rsquo;s positions,
-              currencies, costs and time — and the answers live in how they interact.
+              currencies, costs and time — and the answers live in how they
+              interact.
             </p>
           </Reveal>
 
           <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
             {FEATURES.map((f, i) => (
-              <Reveal key={f.title} delay={(i % 4) * 80} className={f.wide ? "lg:col-span-2" : ""}>
+              <Reveal
+                key={f.title}
+                delay={(i % 4) * 80}
+                className={f.wide ? "lg:col-span-2" : ""}
+              >
                 <SpotlightCard className="h-full">
                   <div className="flex h-full flex-col p-7">
                     <div className="mb-5 grid size-9 place-items-center rounded-[9px] border border-subtle bg-elevated text-gold">
                       <Icon name={f.icon} size={17} />
                     </div>
-                    <h3 className="mb-2 font-ui text-[16px] font-semibold text-primary">{f.title}</h3>
-                    <p className="font-ui text-[13.5px] leading-relaxed text-secondary">{f.copy}</p>
+                    <h3 className="mb-2 font-ui text-[16px] font-semibold text-primary">
+                      {f.title}
+                    </h3>
+                    <p className="font-ui text-[13.5px] leading-relaxed text-secondary">
+                      {f.copy}
+                    </p>
 
                     {f.visual === "dumbbell" && (
                       <div aria-hidden className="mt-auto pt-7">
@@ -158,15 +190,17 @@ export default function LandingPage() {
                           <div className="absolute left-[76%] top-1 h-3 border-l-2 border-gold" />
                         </div>
                         <div className="mt-2 flex justify-between font-mono text-[9.5px] tracking-[.06em] text-muted">
-                          <span>ASSET +S$3,240</span><span>FX +S$1,180</span>
+                          <span>ASSET +S$3,240</span>
+                          <span>FX +S$1,180</span>
                         </div>
                       </div>
                     )}
                     {f.visual === "stream" && (
                       <div aria-hidden className="mt-auto pt-7">
                         <div className="rounded-xl border border-subtle bg-elevated/60 p-4 font-ui text-[12px] leading-[1.7] text-secondary">
-                          <span className="text-gold">▸</span> Your SGD exposure cushioned this
-                          week&rsquo;s USD drawdown — about 38% of the dip was currency, not
+                          <span className="text-gold">▸</span> Your SGD exposure
+                          cushioned this week&rsquo;s USD drawdown — about 38%
+                          of the dip was currency, not
                           <span className="ml-1 inline-block h-3.5 w-[7px] animate-blink bg-gold align-[-2px]" />
                         </div>
                       </div>
@@ -186,7 +220,9 @@ export default function LandingPage() {
                 <div className="font-mono text-[clamp(30px,4vw,42px)] font-semibold text-gold">
                   <CountUp to={n.value} suffix={n.suffix} />
                 </div>
-                <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[.12em] text-secondary">{n.label}</div>
+                <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[.12em] text-secondary">
+                  {n.label}
+                </div>
               </Reveal>
             ))}
           </div>
@@ -199,10 +235,13 @@ export default function LandingPage() {
         <section className="relative mx-auto max-w-[1140px] px-6 py-28 text-center md:py-40">
           <Reveal>
             <h2 className="mx-auto max-w-[18ch] font-serif text-[clamp(40px,6vw,76px)] leading-[1.05] tracking-[-0.01em] text-primary">
-              Your whole portfolio, finally in <span className="italic text-gold">focus</span>.
+              Your whole portfolio, finally in{" "}
+              <span className="italic text-gold">focus</span>.
             </h2>
             <div className="mt-10 flex justify-center">
-              <a href="/login" className={CTA_PILL}>Start tracking&ensp;→</a>
+              <a href="/login" className={CTA_PILL}>
+                Start tracking&ensp;→
+              </a>
             </div>
           </Reveal>
         </section>
@@ -212,11 +251,17 @@ export default function LandingPage() {
       <footer className="border-t border-subtle">
         <div className="mx-auto flex max-w-[1140px] flex-wrap items-center justify-between gap-6 px-6 py-12">
           <div>
-            <div className="font-serif text-[18px] text-gold [text-shadow:0_0_18px_var(--accent-glow)]">Vantage</div>
-            <div className="mt-1.5 font-ui text-[11.5px] text-muted">Personal finance dashboard — data stays private</div>
+            <div className="font-serif text-[18px] text-gold [text-shadow:0_0_18px_var(--accent-glow)]">
+              Vantage
+            </div>
+            <div className="mt-1.5 font-ui text-[11.5px] text-muted">
+              Personal finance dashboard — data stays private
+            </div>
           </div>
           <div className="flex items-center gap-6 font-ui text-[12px] text-secondary">
-            <a href="/login" className="transition-colors hover:text-primary">Sign in</a>
+            <a href="/login" className="transition-colors hover:text-primary">
+              Sign in
+            </a>
             <span className="text-muted">© 2026 Vantage</span>
           </div>
         </div>

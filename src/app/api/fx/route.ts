@@ -16,7 +16,10 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: "invalid base currency" }, { status: 400 });
   }
   if (date && !DATE_RE.test(date)) {
-    return Response.json({ error: "invalid date, expected YYYY-MM-DD" }, { status: 400 });
+    return Response.json(
+      { error: "invalid date, expected YYYY-MM-DD" },
+      { status: 400 },
+    );
   }
 
   const { frankfurter: enabled } = await getProviderFlags();
@@ -27,7 +30,8 @@ export async function GET(req: NextRequest) {
     : `https://api.frankfurter.app/latest?base=${base}`;
 
   const res = await fetch(url, { next: { revalidate: 3600 } });
-  if (!res.ok) return Response.json({ error: "FX fetch failed" }, { status: 502 });
+  if (!res.ok)
+    return Response.json({ error: "FX fetch failed" }, { status: 502 });
 
   const json = await res.json();
   return Response.json(json.rates);

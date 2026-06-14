@@ -2,9 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { DM_Serif_Display, JetBrains_Mono, Sora } from "next/font/google";
 import "./globals.css";
 import { headers } from "next/headers";
+import Script from "next/script";
 
 import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next"
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AppToaster } from "@/components/AppToaster";
 
 const dmSerif = DM_Serif_Display({
@@ -28,7 +29,8 @@ const sora = Sora({
 
 export const metadata: Metadata = {
   title: "Vantage — Personal Wealth Terminal",
-  description: "Track stocks, ETFs, crypto, gold and property across 30 global exchanges. Live prices, FX-aware P&L and AI analysis. Your data stays in your own database.",
+  description:
+    "Track stocks, ETFs, crypto, gold and property across 30 global exchanges. Live prices, FX-aware P&L and AI analysis. Your data stays in your own database.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
@@ -57,7 +59,11 @@ export default async function RootLayout({
       className={`${dmSerif.variable} ${jetbrainsMono.variable} ${sora.variable}`}
     >
       <head>
-        <script src="/theme-init.js" nonce={nonce} />
+        <Script
+          src="/theme-init.js"
+          nonce={nonce}
+          strategy="beforeInteractive"
+        />
       </head>
       <body>
         {children}

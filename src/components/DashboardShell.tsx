@@ -39,10 +39,22 @@ interface DashboardShellProps {
 }
 
 export function DashboardShell({
-  holdings, hero, assetAllocation, geoAllocation,
-  movers, currencyCards, waterfallData,
-  portfolioSeries, portfolioSeriesDaily, fxSeries, fxLabels, fxColors, baseFxRates,
-  initialDisplayName, initialBaseCurrency, initialRole,
+  holdings,
+  hero,
+  assetAllocation,
+  geoAllocation,
+  movers,
+  currencyCards,
+  waterfallData,
+  portfolioSeries,
+  portfolioSeriesDaily,
+  fxSeries,
+  fxLabels,
+  fxColors,
+  baseFxRates,
+  initialDisplayName,
+  initialBaseCurrency,
+  initialRole,
   children,
 }: DashboardShellProps) {
   const [tweaksOpen, setTweaksOpen] = useState(false);
@@ -51,12 +63,26 @@ export function DashboardShell({
   const showSidebar = !["/overview", "/settings", "/admin"].includes(pathname);
 
   return (
-    <PortfolioProvider value={{
-      holdings, hero, assetAllocation, geoAllocation,
-      movers, currencyCards, waterfallData,
-      portfolioSeries, portfolioSeriesDaily, fxSeries, fxLabels, fxColors, baseFxRates,
-      initialDisplayName, initialBaseCurrency, initialRole,
-    }}>
+    <PortfolioProvider
+      value={{
+        holdings,
+        hero,
+        assetAllocation,
+        geoAllocation,
+        movers,
+        currencyCards,
+        waterfallData,
+        portfolioSeries,
+        portfolioSeriesDaily,
+        fxSeries,
+        fxLabels,
+        fxColors,
+        baseFxRates,
+        initialDisplayName,
+        initialBaseCurrency,
+        initialRole,
+      }}
+    >
       <div className="flex min-h-screen flex-col">
         <NerveBar
           hero={hero}

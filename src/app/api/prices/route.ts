@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   if (!Array.isArray(tickers) || tickers.length > MAX_TICKERS) {
     return Response.json(
       { error: `tickers must be an array of at most ${MAX_TICKERS}` },
-      { status: 400 }
+      { status: 400 },
     );
   }
   if (!tickers.every((t) => typeof t === "string" && TICKER_RE.test(t))) {

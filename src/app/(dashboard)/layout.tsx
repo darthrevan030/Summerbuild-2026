@@ -1,6 +1,10 @@
 export const dynamic = "force-dynamic";
 
-import { fetchHoldings, fetchUserSettings, fetchSnapshots } from "@/lib/supabase/data";
+import {
+  fetchHoldings,
+  fetchUserSettings,
+  fetchSnapshots,
+} from "@/lib/supabase/data";
 import {
   computeHeroStats,
   computeAllocationByAsset,
@@ -17,13 +21,21 @@ import {
 import { DashboardShell } from "@/components/DashboardShell";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const [holdings, userSettings, snapshots] = await Promise.all([
     user ? fetchHoldings(user.id) : Promise.resolve([]),
-    user ? fetchUserSettings(user.id) : Promise.resolve({ displayName: "", baseCurrency: "SGD", role: "user" }),
+    user
+      ? fetchUserSettings(user.id)
+      : Promise.resolve({ displayName: "", baseCurrency: "SGD", role: "user" }),
     user ? fetchSnapshots(user.id) : Promise.resolve([]),
   ]);
 
@@ -34,8 +46,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const currencyCards = computeCurrencyCards(holdings);
   const waterfallData = computeWaterfall(currencyCards);
   const portfolioSeries = generatePortfolioSeries(snapshots, holdings);
-  const portfolioSeriesDaily = generatePortfolioSeriesDaily(snapshots, holdings);
-  const { series: fxSeries, fxLabels } = generateFxSeries(snapshots, currencyCards, holdings);
+  const portfolioSeriesDaily = generatePortfolioSeriesDaily(
+    snapshots,
+    holdings,
+  );
+  const { series: fxSeries, fxLabels } = generateFxSeries(
+    snapshots,
+    currencyCards,
+    holdings,
+  );
   const fxColors = buildFxColors(currencyCards);
   const baseFxRates = buildBaseFxRates(currencyCards);
 

@@ -12,12 +12,12 @@ import { usePortfolio } from "@/context/portfolio";
 import { SPRING_SMOOTH } from "@/components/landing/motion-config";
 
 const TABS = [
-  { label: "Overview",     href: "/overview",  icon: "layout-dashboard" },
-  { label: "Holdings",     href: "/holdings",  icon: "list"             },
-  { label: "FX Lab",       href: "/fx-lab",    icon: "repeat"           },
-  { label: "Charts",       href: "/charts",    icon: "bar-chart"        },
-  { label: "Analysis",     href: "/analysis",  icon: "sparkles"         },
-  { label: "Add / Import", href: "/add",       icon: "circle-plus"      },
+  { label: "Overview", href: "/overview", icon: "layout-dashboard" },
+  { label: "Holdings", href: "/holdings", icon: "list" },
+  { label: "FX Lab", href: "/fx-lab", icon: "repeat" },
+  { label: "Charts", href: "/charts", icon: "bar-chart" },
+  { label: "Analysis", href: "/analysis", icon: "sparkles" },
+  { label: "Add / Import", href: "/add", icon: "circle-plus" },
 ];
 
 const TAB_BASE =
@@ -43,19 +43,29 @@ interface TabBarProps {
   onTweaksToggle?: () => void;
 }
 
-export function TabBar({ mobileOpen = false, onMobileClose, onTweaksToggle }: TabBarProps) {
+export function TabBar({
+  mobileOpen = false,
+  onMobileClose,
+  onTweaksToggle,
+}: TabBarProps) {
   const pathname = usePathname();
-  const router   = useRouter();
-  const reduce   = useReducedMotion();
+  const router = useRouter();
+  const reduce = useReducedMotion();
   const { displayName } = usePortfolio();
 
   // Close drawer on route change
-  useEffect(() => { onMobileClose?.(); }, [pathname]);
+  useEffect(() => {
+    onMobileClose?.();
+  }, [pathname]);
 
   // Shared sliding underline — only the active tab mounts it; the layoutId
   // animates it between tabs on navigation (instant under reduced-motion).
   const underline = (
-    <motion.span layoutId="tab-underline" className={UNDERLINE} transition={reduce ? { duration: 0 } : SPRING_SMOOTH} />
+    <motion.span
+      layoutId="tab-underline"
+      className={UNDERLINE}
+      transition={reduce ? { duration: 0 } : SPRING_SMOOTH}
+    />
   );
 
   async function handleLogout() {
@@ -70,7 +80,7 @@ export function TabBar({ mobileOpen = false, onMobileClose, onTweaksToggle }: Ta
       toast.success(
         refreshed > 0
           ? `Refreshed ${refreshed} price${refreshed > 1 ? "s" : ""}`
-          : "Prices already up to date"
+          : "Prices already up to date",
       );
       router.refresh();
     } catch {
@@ -108,11 +118,23 @@ export function TabBar({ mobileOpen = false, onMobileClose, onTweaksToggle }: Ta
 
       {/* Mobile slide-out drawer */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-[300] bg-black/65 backdrop-blur-[4px] animate-mm-fade" onClick={onMobileClose}>
-          <div className="absolute inset-y-0 left-0 flex w-[72%] max-w-72 flex-col border-r border-subtle bg-surface animate-mm-slide" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-[300] bg-black/65 backdrop-blur-[4px] animate-mm-fade"
+          onClick={onMobileClose}
+        >
+          <div
+            className="absolute inset-y-0 left-0 flex w-[72%] max-w-72 flex-col border-r border-subtle bg-surface animate-mm-slide"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex shrink-0 items-center justify-between border-b border-subtle px-[18px] pb-4 pt-[18px]">
-              <span className="font-serif text-[17px] tracking-[.3px] text-gold">Vantage</span>
-              <button className={ICON_BTN} onClick={onMobileClose} title="Close">
+              <span className="font-serif text-[17px] tracking-[.3px] text-gold">
+                Vantage
+              </span>
+              <button
+                className={ICON_BTN}
+                onClick={onMobileClose}
+                title="Close"
+              >
                 <Icon name="x" size={16} />
               </button>
             </div>
@@ -140,7 +162,10 @@ export function TabBar({ mobileOpen = false, onMobileClose, onTweaksToggle }: Ta
             </nav>
 
             <div className="flex shrink-0 flex-col gap-1.5 border-t border-subtle px-3.5 pb-5 pt-3">
-              <button className={`${MM_ACTION} hover:border-muted hover:bg-elevated hover:text-primary`} onClick={handleRefresh}>
+              <button
+                className={`${MM_ACTION} hover:border-muted hover:bg-elevated hover:text-primary`}
+                onClick={handleRefresh}
+              >
                 <Icon name="refresh" size={15} />
                 Refresh prices
               </button>
@@ -156,7 +181,10 @@ export function TabBar({ mobileOpen = false, onMobileClose, onTweaksToggle }: Ta
                   Appearance
                 </button>
               )}
-              <button className={`${MM_ACTION} hover:border-loss hover:text-loss`} onClick={handleLogout}>
+              <button
+                className={`${MM_ACTION} hover:border-loss hover:text-loss`}
+                onClick={handleLogout}
+              >
                 <Icon name="logout" size={15} />
                 Log out
               </button>

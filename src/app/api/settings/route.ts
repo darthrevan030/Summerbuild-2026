@@ -25,10 +25,16 @@ export async function POST(req: NextRequest) {
       : undefined;
 
   if (displayName !== undefined && displayName.length > 80) {
-    return NextResponse.json({ error: "displayName too long" }, { status: 400 });
+    return NextResponse.json(
+      { error: "displayName too long" },
+      { status: 400 },
+    );
   }
   if (baseCurrency !== undefined && !CCY_RE.test(baseCurrency)) {
-    return NextResponse.json({ error: "invalid baseCurrency" }, { status: 400 });
+    return NextResponse.json(
+      { error: "invalid baseCurrency" },
+      { status: 400 },
+    );
   }
 
   await upsertUserSettings(user.id, { displayName, baseCurrency });

@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { useRef } from "react";
-import { motion, useMotionValue, useSpring, useReducedMotion } from "motion/react";
+import {
+  motion,
+  useMotionValue,
+  useSpring,
+  useReducedMotion,
+} from "motion/react";
 import { SPRING_SNAPPY } from "./motion-config";
 
 const MotionLink = motion.create(Link);
@@ -43,7 +48,10 @@ export function MagneticButton({
       my.set(dy * strength);
     }
   }
-  const reset = () => { mx.set(0); my.set(0); };
+  const reset = () => {
+    mx.set(0);
+    my.set(0);
+  };
 
   if (href) {
     return (

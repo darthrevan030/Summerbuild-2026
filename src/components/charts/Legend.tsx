@@ -22,7 +22,13 @@ const LAYOUTS = {
   rowCenter: "flex flex-row flex-wrap justify-center gap-x-3.5 gap-y-[7px]",
 };
 
-export function Legend({ data, highlight = -1, onItem, showPct = true, layout = "wrap" }: LegendProps) {
+export function Legend({
+  data,
+  highlight = -1,
+  onItem,
+  showPct = true,
+  layout = "wrap",
+}: LegendProps) {
   return (
     <div className={LAYOUTS[layout]}>
       {data.map((d, i) => (
@@ -30,11 +36,21 @@ export function Legend({ data, highlight = -1, onItem, showPct = true, layout = 
           key={i}
           className="flex items-center gap-[7px] border-none bg-transparent p-0 font-ui text-xs text-secondary transition-opacity duration-200"
           onClick={onItem ? () => onItem(i) : undefined}
-          style={{ opacity: highlight >= 0 && highlight !== i ? 0.4 : 1, cursor: onItem ? "pointer" : "default" }}
+          style={{
+            opacity: highlight >= 0 && highlight !== i ? 0.4 : 1,
+            cursor: onItem ? "pointer" : "default",
+          }}
         >
-          <i className="size-[9px] shrink-0 rounded-[2px]" style={{ background: d.color }} />
+          <i
+            className="size-[9px] shrink-0 rounded-[2px]"
+            style={{ background: d.color }}
+          />
           <span className="font-ui">{d.label}</span>
-          {showPct && <span className="ml-auto font-mono text-[11px] text-muted">{d.value}%</span>}
+          {showPct && (
+            <span className="ml-auto font-mono text-[11px] text-muted">
+              {d.value}%
+            </span>
+          )}
         </button>
       ))}
     </div>

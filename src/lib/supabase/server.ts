@@ -18,6 +18,6 @@ export async function createClient() {
           }
         },
       },
-    }
+    },
   );
 }

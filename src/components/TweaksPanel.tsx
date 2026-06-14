@@ -11,11 +11,21 @@ interface TweakState {
 /* Matches max-bp600 (width < 600px): the panel becomes a bottom sheet there */
 const MOBILE_MQ = "(max-width: 599.98px)";
 
-function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+function Toggle({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
   const reduce = useReducedMotion();
   return (
     <div className="flex items-center justify-between gap-2.5">
-      <span className="text-xs font-medium text-[rgba(41,38,27,.72)]">{label}</span>
+      <span className="text-xs font-medium text-[rgba(41,38,27,.72)]">
+        {label}
+      </span>
       <button
         type="button"
         role="switch"
@@ -36,7 +46,13 @@ function Toggle({ label, value, onChange }: { label: string; value: boolean; onC
   );
 }
 
-export function TweaksPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function TweaksPanel({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   // Initialise from the DOM: the root layout's theme script may have added
   // .light before this mounts — defaults here must mirror it, not stomp it.
   const [tw, setTw] = useState<TweakState>(() => {
@@ -65,10 +81,14 @@ export function TweaksPanel({ open, onClose }: { open: boolean; onClose: () => v
       panel.style.bottom = "";
       return;
     }
-    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const w = panel.offsetWidth,
+      h = panel.offsetHeight;
     const maxX = Math.max(PAD, window.innerWidth - w - PAD);
     const maxY = Math.max(PAD, window.innerHeight - h - PAD);
-    offsetRef.current = { x: Math.min(maxX, Math.max(PAD, offsetRef.current.x)), y: Math.min(maxY, Math.max(PAD, offsetRef.current.y)) };
+    offsetRef.current = {
+      x: Math.min(maxX, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxY, Math.max(PAD, offsetRef.current.y)),
+    };
     panel.style.right = offsetRef.current.x + "px";
     panel.style.bottom = offsetRef.current.y + "px";
   }, []);
@@ -86,14 +106,21 @@ export function TweaksPanel({ open, onClose }: { open: boolean; onClose: () => v
     const panel = dragRef.current;
     if (!panel) return;
     const r = panel.getBoundingClientRect();
-    const sx = e.clientX, sy = e.clientY;
+    const sx = e.clientX,
+      sy = e.clientY;
     const startRight = window.innerWidth - r.right;
     const startBottom = window.innerHeight - r.bottom;
     const move = (ev: MouseEvent) => {
-      offsetRef.current = { x: startRight - (ev.clientX - sx), y: startBottom - (ev.clientY - sy) };
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
       clamp();
     };
-    const up = () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); };
+    const up = () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+    };
     window.addEventListener("mousemove", move);
     window.addEventListener("mouseup", up);
   };
@@ -120,16 +147,22 @@ export function TweaksPanel({ open, onClose }: { open: boolean; onClose: () => v
           className="size-[22px] rounded-md border-0 bg-transparent text-[13px] text-[rgba(41,38,27,.55)]"
           onMouseDown={(e) => e.stopPropagation()}
           onClick={onClose}
-        >✕</button>
+        >
+          ✕
+        </button>
       </div>
       <div className="flex flex-col gap-2.5 overflow-y-auto px-3.5 pb-3.5 pt-0.5">
-        <div className="text-[10px] font-semibold uppercase tracking-[.06em] text-[rgba(41,38,27,.45)]">Appearance</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[.06em] text-[rgba(41,38,27,.45)]">
+          Appearance
+        </div>
         <Toggle
           label="Light mode"
           value={tw.lightMode}
           onChange={(v) => {
             setTweak("lightMode", v);
-            try { localStorage.setItem("theme", v ? "light" : "dark"); } catch {}
+            try {
+              localStorage.setItem("theme", v ? "light" : "dark");
+            } catch {}
           }}
         />
       </div>
