@@ -1,3 +1,7 @@
+import YahooFinanceClass from "yahoo-finance2";
+// v3: default export is the class, not an instance
+const yahooFinance = new YahooFinanceClass();
+
 const CRYPTO_IDS: Record<string, string> = {
   BTC: "bitcoin", ETH: "ethereum", BNB: "binancecoin",
   SOL: "solana", XRP: "ripple", ADA: "cardano", DOGE: "dogecoin",
@@ -41,6 +45,26 @@ const FINNHUB_PREFIX: Record<string, string> = {
   CNH: "SHG:",
 };
 
+// Yahoo Finance suffixes by app exchange code (app ticker suffix or EODHD_CODE_REMAP output).
+// US stocks use no suffix. Covers all 14 exchanges the app supports.
+const YAHOO_SUFFIX: Record<string, string> = {
+  US:    "",
+  LSE:   ".L",
+  XETRA: ".DE",
+  TSE:   ".T",
+  NSE:   ".NS",
+  BSE:   ".BO",
+  HK:    ".HK",
+  HKEX:  ".HK",
+  SI:    ".SI",  // SGX — EODHD remaps SG→SI; Yahoo also uses .SI
+  SG:    ".SI",
+  AU:    ".AX",  // ASX — EODHD remaps ASX→AU; Yahoo uses .AX
+  ASX:   ".AX",
+  SHG:   ".SS",
+  SHE:   ".SZ",
+  MI:    ".MI",
+};
+
 /**
  * Returns the EODHD real-time symbol for a ticker.
  * If the ticker already contains a dot (e.g. "VWRA.LSE") it's used as-is.
@@ -53,6 +77,27 @@ function toEohdSymbol(ticker: string, currency: string): string {
   }
   const exchange = EODHD_EXCHANGE[currency] ?? "US";
   return `${ticker}.${exchange}`;
+}
+
+/**
+ * Returns the Yahoo Finance symbol for a ticker.
+ * US stocks: bare ticker (no suffix). All others: ticker + exchange suffix.
+ */
+function toYahooSymbol(ticker: string, currency: string): string {
+  if (ticker.includes(".")) {
+    const dot = ticker.lastIndexOf(".");
+    const sym = ticker.slice(0, dot);
+    const exc = ticker.slice(dot + 1).toUpperCase();
+    if (exc in YAHOO_SUFFIX) {
+      const suffix = YAHOO_SUFFIX[exc];
+      return suffix ? `${sym}${suffix}` : sym;
+    }
+    return ticker; // unknown exchange — pass through as-is
+  }
+  // no dot — look up by currency; default to bare ticker (US)
+  const exc = EODHD_EXCHANGE[currency] ?? "US";
+  const suffix = YAHOO_SUFFIX[exc] ?? "";
+  return suffix ? `${ticker}${suffix}` : ticker;
 }
 
 /**
@@ -92,13 +137,22 @@ export async function fetchCryptoSparks(
   return results;
 }
 
+export interface PriceProviders {
+  eodhd?:     boolean;
+  yahoo?:     boolean;
+  coingecko?: boolean;
+  goldapi?:   boolean;
+}
+
 /**
  * Fetches live prices for all tickers.
  * tickerCurrency maps ticker → holding currency so the correct exchange is used.
+ * providers lets callers disable individual data sources (e.g. to preserve daily quotas during testing).
  */
 export async function fetchLivePrices(
   tickers: string[],
-  tickerCurrency: Record<string, string> = {}
+  tickerCurrency: Record<string, string> = {},
+  providers: PriceProviders = {}
 ): Promise<Record<string, number>> {
   const prices: Record<string, number> = {};
   if (tickers.length === 0) return prices;
@@ -108,7 +162,7 @@ export async function fetchLivePrices(
   const equities = tickers.filter((t) => !CRYPTO_IDS[t] && !GOLD_TICKERS.has(t));
 
   await Promise.all([
-    crypto.length > 0 && (async () => {
+    crypto.length > 0 && (providers.coingecko ?? true) && (async () => {
       const ids = crypto.map((t) => CRYPTO_IDS[t]).join(",");
       const res = await fetch(
         `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`
@@ -122,7 +176,7 @@ export async function fetchLivePrices(
       }
     })(),
 
-    gold.length > 0 && process.env.GOLDAPI_KEY && (async () => {
+    gold.length > 0 && (providers.goldapi ?? true) && process.env.GOLDAPI_KEY && (async () => {
       const res = await fetch("https://www.goldapi.io/api/XAU/USD", {
         headers: { "x-access-token": process.env.GOLDAPI_KEY! },
       });
@@ -132,7 +186,7 @@ export async function fetchLivePrices(
       }
     })(),
 
-    equities.length > 0 && process.env.EODHD_API_KEY && (async () => {
+    equities.length > 0 && (providers.eodhd ?? true) && process.env.EODHD_API_KEY && (async () => {
       // Build symbol → original ticker reverse map, then do one bulk call instead of N
       const symbolToTicker: Record<string, string> = {};
       const symbols = equities.map((ticker) => {
@@ -146,19 +200,54 @@ export async function fetchLivePrices(
         const res = await fetch(
           `https://eodhd.com/api/real-time/${first}?api_token=${process.env.EODHD_API_KEY}&fmt=json${extra}`
         );
-        if (!res.ok) return;
+        if (!res.ok) {
+          console.warn("[fetchLivePrices] EODHD non-ok:", res.status, symbols);
+          return;
+        }
         const json = await res.json();
         // Single ticker → plain object; multiple tickers → array
-        const items: { code: string; close: number }[] = Array.isArray(json) ? json : [json];
+        const items: { code: string; close: unknown }[] = Array.isArray(json) ? json : [json];
         for (const item of items) {
           const ticker = symbolToTicker[item.code];
-          // An unmatched code means the holding silently keeps its stale price
-          if (!ticker) console.warn("[fetchLivePrices] unmatched EODHD code:", item.code);
-          if (ticker && item.close) prices[ticker] = item.close;
+          if (!ticker) {
+            console.warn("[fetchLivePrices] unmatched EODHD code:", item.code, "→ map has:", Object.keys(symbolToTicker));
+          }
+          // EODHD returns "NA" (string) for exchanges not in plan; treat as no data
+          const close = typeof item.close === "number" && item.close > 0 ? item.close : null;
+          if (!close) {
+            console.warn("[fetchLivePrices] no usable close for", item.code, "got:", item.close);
+          }
+          if (ticker && close) prices[ticker] = close;
         }
-      } catch {}
+      } catch (e) {
+        console.warn("[fetchLivePrices] EODHD error:", e);
+      }
     })(),
   ]);
+
+  // Yahoo Finance fallback via yahoo-finance2 (handles crumb/auth internally).
+  const unpriced = equities.filter((t) => prices[t] === undefined);
+  if (unpriced.length > 0 && (providers.yahoo ?? true)) {
+    const yahooSymbolToTicker: Record<string, string> = {};
+    const yahooSymbols: string[] = [];
+    for (const ticker of unpriced) {
+      const sym = toYahooSymbol(ticker, tickerCurrency[ticker] ?? "USD");
+      yahooSymbolToTicker[sym] = ticker;
+      yahooSymbols.push(sym);
+    }
+    try {
+      const results = await yahooFinance.quote(yahooSymbols, {}, { validateResult: false });
+      const arr = Array.isArray(results) ? results : [results];
+      for (const q of arr) {
+        const ticker = yahooSymbolToTicker[q.symbol];
+        if (ticker && typeof q.regularMarketPrice === "number" && q.regularMarketPrice > 0) {
+          prices[ticker] = q.regularMarketPrice;
+        }
+      }
+    } catch (e) {
+      console.warn("[fetchLivePrices] Yahoo error:", e);
+    }
+  }
 
   return prices;
 }

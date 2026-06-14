@@ -1,6 +1,8 @@
 import { fetchHoldings, updateHoldingPrice, recordSnapshot } from "@/lib/supabase/data";
 import { fetchLivePrices, fetchLiveFxRates, fetchCryptoSparks, fetchEquitySparks } from "@/lib/prices";
 import { requireAuth } from "@/lib/supabase/guards";
+import { enforceRateLimit } from "@/lib/supabase/rate-limit";
+import { getProviderFlags } from "@/lib/supabase/app-config";
 
 const STALE_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -12,6 +14,9 @@ function isStale(priceRefreshedAt: string | null): boolean {
 export async function POST() {
   const { user, error } = await requireAuth();
   if (error) return error;
+
+  const limited = await enforceRateLimit("refresh", 12, 60);
+  if (limited) return limited;
 
   const holdings = await fetchHoldings(user.id);
   const stale = holdings.filter((h) => isStale(h.priceRefreshedAt));
@@ -28,11 +33,13 @@ export async function POST() {
     stale.filter((h) => h.ticker !== "—").map((h) => [h.ticker, h.currency])
   );
 
+  const providers = await getProviderFlags();
+
   const [livePrices, liveFxRates, cryptoSparks, equitySparks] = await Promise.all([
-    fetchLivePrices(tickers, tickerCurrency),
-    fetchLiveFxRates(),
-    fetchCryptoSparks(tickers),
-    fetchEquitySparks(tickers, tickerCurrency),
+    fetchLivePrices(tickers, tickerCurrency, providers),
+    providers.frankfurter ? fetchLiveFxRates() : Promise.resolve({} as Record<string, number>),
+    providers.coingecko ? fetchCryptoSparks(tickers) : Promise.resolve({} as Record<string, number[]>),
+    providers.finnhub ? fetchEquitySparks(tickers, tickerCurrency) : Promise.resolve({} as Record<string, number[]>),
   ]);
 
   await Promise.all(

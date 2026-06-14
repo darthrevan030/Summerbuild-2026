@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getProviderFlags } from "@/lib/supabase/app-config";
 import { RoleToggle } from "./RoleToggle";
 import { ActiveToggle } from "./ActiveToggle";
 import type { CurrencyRow } from "@/app/api/currencies/route";
@@ -53,6 +54,7 @@ export default async function AdminPage() {
     { count: staleCount },
     { data: currencyRows },
     { data: exchangeRows },
+    providerFlags,
   ] = await Promise.all([
     adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 }),
     supabase.from("user_settings").select("user_id, display_name, role"),
@@ -75,6 +77,7 @@ export default async function AdminPage() {
       .from("exchanges")
       .select("code, label, region, active, display_order")
       .order("display_order"),
+    getProviderFlags(),
   ]);
 
   // Build per-user holding counts
@@ -271,6 +274,37 @@ export default async function AdminPage() {
               initialActive={e.active}
               endpoint="/api/admin/exchanges"
               codeMinWidth={48}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* API provider toggles */}
+      <div className="card px-5 py-4.5 animate-reveal max-bp768:overflow-hidden max-bp480:p-3.5 max-bp380:p-3" style={{ animationDelay: ".30s" }}>
+        <div className="mb-4 flex items-baseline justify-between max-bp600:flex-wrap max-bp600:items-center max-bp600:gap-2">
+          <span className="text-[13px] font-semibold tracking-[.01em] text-primary">Price Data Providers</span>
+          <span className="font-ui text-[11px] text-secondary">disable to preserve quotas during testing</span>
+        </div>
+        <div>
+          {(
+            [
+              { code: "eodhd",       label: "EODHD",          region: "Equities — primary (limited daily quota)",    active: providerFlags.eodhd },
+              { code: "yahoo",       label: "Yahoo Finance",  region: "Equities — fallback",                       active: providerFlags.yahoo },
+              { code: "coingecko",   label: "CoinGecko",      region: "Crypto prices & sparklines",                active: providerFlags.coingecko },
+              { code: "goldapi",     label: "Gold API",        region: "Gold spot price",                           active: providerFlags.goldapi },
+              { code: "finnhub",     label: "Finnhub",         region: "Equity sparklines, quotes, news, FX candles", active: providerFlags.finnhub },
+              { code: "frankfurter", label: "Frankfurter",     region: "Live & historical FX rates",                active: providerFlags.frankfurter },
+              { code: "anthropic",   label: "Anthropic",       region: "Analyst AI (Claude)",                       active: providerFlags.anthropic },
+            ] as { code: string; label: string; region: string; active: boolean }[]
+          ).map((p) => (
+            <ActiveToggle
+              key={p.code}
+              code={p.code}
+              label={p.label}
+              region={p.region}
+              initialActive={p.active}
+              endpoint="/api/admin/config"
+              codeMinWidth={72}
             />
           ))}
         </div>
