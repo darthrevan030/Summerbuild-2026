@@ -28,12 +28,12 @@ export async function POST(req: NextRequest) {
 
   let pdfText = "";
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { PDFParse } = require("pdf-parse");
-    const parser = new PDFParse({ data: buffer });
+    const { PDFParse } = await import("pdf-parse");
+    const parser = new PDFParse({ data: new Uint8Array(buffer) });
     const result = await parser.getText();
     pdfText = result.text as string;
-  } catch {
+  } catch (err) {
+    console.error("[parse-pdf] PDF parsing failed:", err);
     return NextResponse.json(
       { error: "Could not read PDF — make sure the file is a valid, text-based PDF." },
       { status: 422 },
