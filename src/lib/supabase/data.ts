@@ -305,15 +305,43 @@ export async function upsertInstrument(
 export async function updateInstrument(
   id: string,
   patch: Partial<{
+    symbol: string;
+    currency: string;
+    flag: string;
+    asset_type: string;
     name: string;
     par_value: number | null;
     coupon_rate: number | null;
     maturity_date: string | null;
   }>,
-): Promise<void> {
+): Promise<boolean> {
   const admin = createAdminClient();
   const { error } = await admin.from("instruments").update(patch).eq("id", id);
-  if (error) console.error("[updateInstrument]", error.message);
+  if (error) {
+    console.error("[updateInstrument]", error.message);
+    return false;
+  }
+  return true;
+}
+
+// Repair an instrument's stored currency (and matching flag) by symbol. Uses
+// the admin client because instruments are shared across users. Scoped by both
+// symbol AND the old (wrong) currency so an already-correct row is never
+// clobbered. Drives the refresh route's auto-heal of currencies that were
+// guessed from the listing exchange (e.g. a USD ETF on the LSE stored as GBP).
+export async function correctInstrumentCurrency(
+  symbol: string,
+  fromCurrency: string,
+  toCurrency: string,
+  flag: string,
+): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("instruments")
+    .update({ currency: toCurrency, flag })
+    .eq("symbol", symbol)
+    .eq("currency", fromCurrency);
+  if (error) console.error("[correctInstrumentCurrency]", error.message);
 }
 
 // ── Lot writes (user data → user-scoped client, RLS enforced) ─────────────────
@@ -393,19 +421,33 @@ export async function updateLot(
   return hydrateLot(supabase, data as DbLot);
 }
 
-// Edit instrument-level fields via a lot the caller owns. The ownership check
-// (lot belongs to userId) gates the admin-client write, so a user can only edit
-// instruments they actually hold.
+export type InstrumentEditResult = "ok" | "not_found" | "shared" | "error";
+
+// Edit instrument-level fields via a lot the caller owns.
+//
+// Instrument rows are SHARED across users (deduplicated securities). Owning a
+// lot is therefore NOT sufficient authorization to mutate the security record —
+// otherwise one user could re-point the symbol, re-denominate the currency, or
+// change the asset type of a security that OTHER users also hold (cross-tenant
+// tampering). So we additionally require the caller to be the SOLE holder: no
+// lot from any other user may reference this instrument. When the security is
+// shared, the manual edit is refused; provider-authoritative corrections still
+// flow through correctInstrumentCurrency() on refresh, which converges every
+// holder to the same true value rather than an attacker-chosen one.
 export async function updateInstrumentForLot(
   lotId: string,
   userId: string,
   patch: Partial<{
+    symbol: string;
+    currency: string;
+    flag: string;
+    asset_type: string;
     name: string;
     par_value: number | null;
     coupon_rate: number | null;
     maturity_date: string | null;
   }>,
-): Promise<boolean> {
+): Promise<InstrumentEditResult> {
   const supabase = await makeServerClient();
   const { data } = await supabase
     .from("lots")
@@ -413,9 +455,24 @@ export async function updateInstrumentForLot(
     .eq("id", lotId)
     .eq("user_id", userId)
     .maybeSingle();
-  if (!data) return false;
-  await updateInstrument(data.instrument_id as string, patch);
-  return true;
+  if (!data) return "not_found";
+  const instrumentId = data.instrument_id as string;
+
+  // Cross-user holder check needs the admin client — RLS hides other users' lots
+  // from the user-scoped client, which would make every instrument look unshared.
+  const admin = createAdminClient();
+  const { count, error: countErr } = await admin
+    .from("lots")
+    .select("id", { count: "exact", head: true })
+    .eq("instrument_id", instrumentId)
+    .neq("user_id", userId);
+  if (countErr) {
+    console.error("[updateInstrumentForLot] holder check", countErr.message);
+    return "error";
+  }
+  if ((count ?? 0) > 0) return "shared";
+
+  return (await updateInstrument(instrumentId, patch)) ? "ok" : "error";
 }
 
 // Set/clear a per-user dividend-yield override via a lot the caller owns. The

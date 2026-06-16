@@ -11,6 +11,8 @@ import {
   seedTickerQuote,
 } from "@/lib/supabase/data";
 import { requireAuth } from "@/lib/supabase/guards";
+import { CCY_FLAG, SUPPORTED_CURRENCIES } from "@/lib/formatters";
+import { ASSET_TYPES } from "@/types/holding";
 
 const TICKER_RE = /^[A-Za-z0-9.\-:]{1,20}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -221,10 +223,35 @@ export async function PATCH(req: NextRequest) {
   for (const k of ["name", "par_value", "coupon_rate", "maturity_date"]) {
     if (body[k] !== undefined) instPatch[k] = body[k];
   }
+  // Ticker (→ symbol), currency and asset_type edit the shared instrument
+  // record. Changing currency also realigns the flag so the UI stays consistent.
+  if (body.ticker !== undefined) instPatch.symbol = body.ticker;
+  if (body.asset_type !== undefined) instPatch.asset_type = body.asset_type;
+  if (body.currency !== undefined) {
+    instPatch.currency = body.currency;
+    instPatch.flag = CCY_FLAG[String(body.currency)] ?? "🌐";
+  }
 
   // Format guards
   if (body.name !== undefined && String(body.name).length > 200)
     return NextResponse.json({ error: "name too long" }, { status: 400 });
+  if (
+    instPatch.symbol !== undefined &&
+    !TICKER_RE.test(String(instPatch.symbol))
+  )
+    return NextResponse.json({ error: "invalid ticker format" }, { status: 400 });
+  if (
+    instPatch.currency !== undefined &&
+    !SUPPORTED_CURRENCIES.includes(
+      String(instPatch.currency) as (typeof SUPPORTED_CURRENCIES)[number],
+    )
+  )
+    return NextResponse.json({ error: "invalid currency" }, { status: 400 });
+  if (
+    instPatch.asset_type !== undefined &&
+    !(ASSET_TYPES as string[]).includes(String(instPatch.asset_type))
+  )
+    return NextResponse.json({ error: "invalid asset_type" }, { status: 400 });
   if (lotPatch.trade_date !== undefined && !DATE_RE.test(String(lotPatch.trade_date)))
     return NextResponse.json({ error: "invalid buy_date format" }, { status: 400 });
   if (
@@ -267,10 +294,18 @@ export async function PATCH(req: NextRequest) {
   )
     return NextResponse.json({ error: "invalid dividend_yield" }, { status: 400 });
 
-  // Apply instrument edits first (ownership-checked), then lot edits
+  // Apply instrument edits first (ownership + sole-holder checked), then lot edits
   if (Object.keys(instPatch).length > 0) {
-    const ok = await updateInstrumentForLot(id, user.id, instPatch);
-    if (!ok)
+    const result = await updateInstrumentForLot(id, user.id, instPatch);
+    if (result === "shared")
+      return NextResponse.json(
+        {
+          error:
+            "This security is held by other accounts, so its ticker, currency, and asset type can't be edited here.",
+        },
+        { status: 409 },
+      );
+    if (result !== "ok")
       return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 

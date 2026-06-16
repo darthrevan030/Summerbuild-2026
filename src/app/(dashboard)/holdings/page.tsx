@@ -8,7 +8,14 @@ import { Icon } from "@/components/Icon";
 import { Select } from "@/components/Select";
 import { Spark } from "@/components/charts/Spark";
 import { Dumbbell } from "@/components/charts/Dumbbell";
-import { pct, rate, NF, ccyFmt } from "@/lib/formatters";
+import {
+  pct,
+  rate,
+  NF,
+  ccyFmt,
+  CCY_FLAG,
+  SUPPORTED_CURRENCIES,
+} from "@/lib/formatters";
 import { refreshHoldingPrices } from "@/lib/api-client";
 import type { HoldingRow, GroupedHolding, AssetType } from "@/types/holding";
 import { FIXED_INCOME_TYPES } from "@/types/holding";
@@ -143,6 +150,9 @@ function DetailCard({ h, onClose }: { h: HoldingRow; onClose: () => void }) {
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState({
     name: h.name,
+    ticker: h.ticker === "—" ? "" : h.ticker,
+    currency: h.currency,
+    asset_type: h.assetType,
     strategy: h.strategy,
     source: h.source ?? "",
     units: String(h.units),
@@ -231,11 +241,25 @@ function DetailCard({ h, onClose }: { h: HoldingRow; onClose: () => void }) {
               : v;
         }
       }
+      // Instrument-level fields edit the SHARED security record, which the API
+      // refuses when the security is held by other accounts. Only send these
+      // when the user actually changed them, so an unrelated lot edit (units,
+      // fees…) on a shared holding isn't rejected for an instrument field the
+      // user never touched.
+      const origTicker = h.ticker === "—" ? "" : h.ticker;
+      const newTicker = ef.ticker.trim().toUpperCase();
+      const instrumentEdits: Record<string, string> = {};
+      if (ef.name !== h.name) instrumentEdits.name = ef.name;
+      if (newTicker && newTicker !== origTicker) instrumentEdits.ticker = newTicker;
+      if (ef.currency !== h.currency) instrumentEdits.currency = ef.currency;
+      if (ef.asset_type !== h.assetType)
+        instrumentEdits.asset_type = ef.asset_type;
+
       const res = await fetch(`/api/holdings?id=${h.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: ef.name,
+          ...instrumentEdits,
           strategy: ef.strategy,
           source: ef.source,
           units: Number(ef.units),
@@ -308,6 +332,43 @@ function DetailCard({ h, onClose }: { h: HoldingRow; onClose: () => void }) {
               className="w-full rounded-[7px] border border-subtle bg-surface px-[9px] py-[7px] font-ui text-[12.5px] text-primary outline-none transition-[border-color] duration-150 focus:border-gold-soft"
               value={ef.name}
               onChange={(e) => setEf("name", e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-[.08em] text-muted">
+              Ticker
+            </span>
+            <input
+              className="w-full rounded-[7px] border border-subtle bg-surface px-[9px] py-[7px] font-ui text-[12.5px] text-primary outline-none transition-[border-color] duration-150 focus:border-gold-soft"
+              placeholder="e.g. VWRA.LSE"
+              value={ef.ticker}
+              onChange={(e) => setEf("ticker", e.target.value.toUpperCase())}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-[.08em] text-muted">
+              Currency
+            </span>
+            <Select
+              value={(CCY_FLAG[ef.currency] ?? "🌐") + " " + ef.currency}
+              options={SUPPORTED_CURRENCIES.map(
+                (c) => (CCY_FLAG[c] ?? "🌐") + " " + c,
+              )}
+              onChange={(v) => setEf("currency", v.split(" ")[1])}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-[.08em] text-muted">
+              Asset Type
+            </span>
+            <Select
+              value={ef.asset_type}
+              options={
+                ASSET_TYPES_EDIT.includes(ef.asset_type)
+                  ? ASSET_TYPES_EDIT
+                  : [...ASSET_TYPES_EDIT, ef.asset_type]
+              }
+              onChange={(v) => setEf("asset_type", v)}
             />
           </div>
           <div className="flex flex-col gap-1">

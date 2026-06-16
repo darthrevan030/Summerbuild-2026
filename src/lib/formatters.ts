@@ -40,4 +40,24 @@ const SUPPORTED_CURRENCIES = [
   "HKD",
 ] as const;
 
-export { NF, pct, rate, ccyFmt, ccySigned, CCY_SYMBOL, SUPPORTED_CURRENCIES };
+const CCY_FLAG: Record<string, string> = {
+  SGD: "🇸🇬",
+  USD: "🇺🇸",
+  EUR: "🇪🇺",
+  GBP: "🇬🇧",
+  AUD: "🇦🇺",
+  JPY: "🇯🇵",
+  INR: "🇮🇳",
+  HKD: "🇭🇰",
+};
+
+export {
+  NF,
+  pct,
+  rate,
+  ccyFmt,
+  ccySigned,
+  CCY_SYMBOL,
+  CCY_FLAG,
+  SUPPORTED_CURRENCIES,
+};

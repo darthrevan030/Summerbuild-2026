@@ -201,7 +201,8 @@ export default async function AdminPage() {
             {tableRows.length} accounts
           </span>
         </div>
-        <table className="w-full border-collapse">
+        <div className="-mx-1 overflow-x-auto px-1">
+        <table className="w-full min-w-120 border-collapse">
           <thead>
             <tr className="border-b border-subtle">
               {["Email", "Joined", "Display Name", "Holdings", "Role", ""].map(
@@ -258,6 +259,7 @@ export default async function AdminPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Price cache health */}
