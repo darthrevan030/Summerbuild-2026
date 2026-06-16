@@ -3,9 +3,9 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProviderFlags } from "@/lib/supabase/app-config";
-import { RoleToggle } from "./RoleToggle";
-import { ActiveToggle } from "./ActiveToggle";
-import { DeleteUserButton } from "./DeleteUserButton";
+import { RoleToggle } from "../../../components/RoleToggle";
+import { ActiveToggle } from "../../../components/ActiveToggle";
+import { DeleteUserButton } from "../../../components/DeleteUserButton";
 import { isAdminRole } from "@/lib/roles";
 import type { CurrencyRow } from "@/app/api/currencies/route";
 import type { ExchangeRow } from "@/app/api/exchanges/route";
@@ -202,7 +202,7 @@ export default async function AdminPage() {
           </span>
         </div>
         <div className="-mx-1 overflow-x-auto px-1">
-        <table className="w-full min-w-120 border-collapse">
+        <table className="w-full min-w-120 border-collapse max-bp600:min-w-0">
           <thead>
             <tr className="border-b border-subtle">
               {["Email", "Joined", "Display Name", "Holdings", "Role", ""].map(
@@ -210,8 +210,11 @@ export default async function AdminPage() {
                   <th
                     key={h || "actions"}
                     className={
-                      "py-2 px-0 font-ui text-[11px] font-medium tracking-[.04em] text-secondary " +
-                      (i >= 3 ? "text-right" : "text-left")
+                      "whitespace-nowrap py-2 px-0 font-ui text-[11px] font-medium tracking-[.04em] text-secondary " +
+                      (i >= 3 ? "text-right " : "text-left ") +
+                      // Joined + Display Name are secondary — hide on phones so
+                      // Email · Holdings · Role · actions fit without clipping.
+                      (i === 1 || i === 2 ? "max-bp600:hidden" : "")
                     }
                   >
                     {h}
@@ -223,17 +226,17 @@ export default async function AdminPage() {
           <tbody>
             {tableRows.map((row) => (
               <tr key={row.id} className="border-b border-subtle">
-                <td className="py-2.5 font-mono text-xs tabular-nums">
+                <td className="whitespace-nowrap py-2.5 font-mono text-xs tabular-nums">
                   {row.email}
                 </td>
-                <td className="py-2.5 font-ui text-xs text-secondary">
+                <td className="whitespace-nowrap py-2.5 font-ui text-xs text-secondary max-bp600:hidden">
                   {new Date(row.joinedAt).toLocaleDateString("en-SG", {
                     year: "numeric",
                     month: "short",
                     day: "numeric",
                   })}
                 </td>
-                <td className="py-2.5 font-ui text-xs">
+                <td className="py-2.5 font-ui text-xs max-bp600:hidden">
                   {row.displayName || "—"}
                 </td>
                 <td className="py-2.5 text-right font-mono text-xs tabular-nums">
