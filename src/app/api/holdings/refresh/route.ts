@@ -3,16 +3,19 @@ import {
   upsertTickerQuote,
   updateFxRate,
   recordSnapshot,
+  correctInstrumentCurrency,
 } from "@/lib/supabase/data";
 import {
   fetchLivePrices,
   fetchLiveFxRates,
   fetchCryptoSparks,
   fetchEquitySparks,
+  fetchTickerCurrencies,
 } from "@/lib/prices";
 import { requireAuth } from "@/lib/supabase/guards";
 import { enforceRateLimit } from "@/lib/supabase/rate-limit";
 import { getProviderFlags } from "@/lib/supabase/app-config";
+import { CCY_FLAG, SUPPORTED_CURRENCIES } from "@/lib/formatters";
 
 const STALE_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -56,7 +59,7 @@ export async function POST() {
 
   const providers = await getProviderFlags();
 
-  const [livePrices, liveFxRates, cryptoSparks, equitySparks] =
+  const [livePrices, liveFxRates, cryptoSparks, equitySparks, liveCurrencies] =
     await Promise.all([
       fetchLivePrices(tickers, tickerCurrency, providers),
       providers.frankfurter
@@ -68,7 +71,38 @@ export async function POST() {
       providers.finnhub
         ? fetchEquitySparks(tickers, tickerCurrency)
         : Promise.resolve({} as Record<string, number[]>),
+      providers.yahoo
+        ? fetchTickerCurrencies(tickers, tickerCurrency)
+        : Promise.resolve({} as Record<string, string>),
     ]);
+
+  // Auto-heal currencies guessed from the exchange. We only correct when the
+  // provider reports a clean, supported currency that differs from what's
+  // stored — pence-quoted "GBp" lines and unknown codes are left untouched so a
+  // price-in-pence is never mislabelled as pounds. Corrected target currencies
+  // are folded into the FX refresh set below so their rate is up to date too.
+  const corrected = new Set<string>();
+  await Promise.all(
+    staleSymbols.map((h) => {
+      const detected = liveCurrencies[h.ticker];
+      if (
+        !detected ||
+        detected === h.currency ||
+        !SUPPORTED_CURRENCIES.includes(
+          detected as (typeof SUPPORTED_CURRENCIES)[number],
+        )
+      )
+        return Promise.resolve();
+      corrected.add(detected);
+      return correctInstrumentCurrency(
+        h.ticker,
+        h.currency,
+        detected,
+        CCY_FLAG[detected] ?? "🌐",
+      );
+    }),
+  );
+  for (const c of corrected) if (c !== "SGD" && !currencies.includes(c)) currencies.push(c);
 
   // 1. Update the shared price cache — one write per symbol
   await Promise.all(

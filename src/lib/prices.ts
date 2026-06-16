@@ -300,6 +300,50 @@ export async function fetchLivePrices(
 }
 
 /**
+ * Looks up each ticker's authoritative listing currency via Yahoo Finance.
+ * Used to detect (and later repair) instruments whose stored currency was
+ * guessed from the exchange — e.g. a USD-denominated ETF listed on the LSE
+ * being wrongly tracked as GBP. Crypto and gold are USD by app convention and
+ * are skipped. Returns { ticker: currencyCode } only for tickers Yahoo reports
+ * a currency for. Pence-quoted UK lines come back as "GBp"; that is passed
+ * through unchanged so the caller can decide to ignore it (price is in pence,
+ * not pounds, so it must NOT be treated as "GBP").
+ */
+export async function fetchTickerCurrencies(
+  tickers: string[],
+  tickerCurrency: Record<string, string> = {},
+): Promise<Record<string, string>> {
+  const equities = tickers.filter((t) => !CRYPTO_IDS[t] && !GOLD_TICKERS.has(t));
+  if (equities.length === 0) return {};
+
+  const symbolToTicker: Record<string, string> = {};
+  const symbols: string[] = [];
+  for (const ticker of equities) {
+    const sym = toYahooSymbol(ticker, tickerCurrency[ticker] ?? "USD");
+    symbolToTicker[sym] = ticker;
+    symbols.push(sym);
+  }
+
+  const out: Record<string, string> = {};
+  try {
+    const quotes = await yahooFinance.quote(
+      symbols,
+      {},
+      { validateResult: false },
+    );
+    const arr = Array.isArray(quotes) ? quotes : [quotes];
+    for (const q of arr) {
+      const ticker = symbolToTicker[q.symbol];
+      if (ticker && typeof q.currency === "string" && q.currency)
+        out[ticker] = q.currency;
+    }
+  } catch (e) {
+    console.warn("[fetchTickerCurrencies] Yahoo error:", e);
+  }
+  return out;
+}
+
+/**
  * 30-day daily closes for equity tickers via Finnhub stock/candle.
  * tickerCurrency maps ticker → holding currency for correct exchange prefix.
  * Returns {} on any failure or missing key.
