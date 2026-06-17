@@ -171,7 +171,6 @@ async function streamAnthropic(
     signal: AbortSignal;
     send: SSESend;
   },
-  req: Request,
 ) {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -221,7 +220,7 @@ async function streamOpenRouter(
       headers: {
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "",
+        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL ?? "https://localhost:3000",
         "X-Title": "Finance Dashboard",
       },
       body: JSON.stringify({
@@ -333,7 +332,7 @@ export async function POST(req: Request) {
         if (canUseOpenRouter) {
           await streamOpenRouter({ system, user, maxTokens, signal: req.signal, send });
         } else {
-          await streamAnthropic({ system, user, maxTokens, signal: req.signal, send }, req);
+          await streamAnthropic({ system, user, maxTokens, signal: req.signal, send });
         }
       } finally {
         try {
