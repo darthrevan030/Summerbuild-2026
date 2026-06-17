@@ -42,6 +42,17 @@ const sanitize = (s: string) => s.replace(/[\x00-\x1F\x7F]/g, " ").trim();
 const sanitizeText = (s: string) =>
   s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, " ").trim();
 
+// Structural defense: escape XML metacharacters so user strings cannot break
+// out of attribute/element context. sanitize() runs first (control chars),
+// then xmlEscape() before any interpolation into XML markup.
+const xmlEscape = (s: string) =>
+  s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+
 // ---------- validation (no deps; swap for zod if you prefer) ----------
 const str = (v: unknown, max: number): v is string =>
   typeof v === "string" && v.trim().length > 0 && v.length <= max;
@@ -85,6 +96,7 @@ function parseBody(body: unknown): AnalystRequest | null {
     if (!Array.isArray(b.holdings) || b.holdings.length > MAX_HOLDINGS)
       return null;
     if (!num(b.totalSGD)) return null;
+    const totalSGD = Math.max(0, Math.min(999_999_999, b.totalSGD as number));
     const holdings: AskHolding[] = [];
     for (const h of b.holdings) {
       const x = h as Record<string, unknown>;
@@ -104,7 +116,7 @@ function parseBody(body: unknown): AnalystRequest | null {
       mode: "ask",
       question: sanitizeText(b.question as string),
       holdings,
-      totalSGD: b.totalSGD,
+      totalSGD,
     };
   }
 
@@ -144,7 +156,7 @@ function buildSentiment(assets: SentimentAsset[]) {
           a.delta != null
             ? ` delta="${a.delta >= 0 ? "+" : ""}${a.delta.toFixed(1)}%"`
             : "";
-        return `  <asset id="${a.id}" type="${a.type}"${d}>${a.name}</asset>`;
+        return `  <asset id="${xmlEscape(a.id)}" type="${xmlEscape(a.type)}"${d}>${xmlEscape(a.name)}</asset>`;
       })
       .join("\n") +
     "\n</holdings>";
@@ -166,7 +178,7 @@ function buildAsk(question: string, holdings: AskHolding[], totalSGD: number) {
   const ctx = holdings
     .map(
       (h) =>
-        `${h.name} (${h.assetType}, ${h.totalPct >= 0 ? "+" : ""}${h.totalPct.toFixed(1)}%)`,
+        `${xmlEscape(h.name)} (${xmlEscape(h.assetType)}, ${h.totalPct >= 0 ? "+" : ""}${h.totalPct.toFixed(1)}%)`,
     )
     .join("; ");
 
@@ -174,7 +186,7 @@ function buildAsk(question: string, holdings: AskHolding[], totalSGD: number) {
     `<portfolio total_sgd="${Math.round(totalSGD)}">\n` +
     `  <holdings>${ctx || "none"}</holdings>\n` +
     `</portfolio>\n` +
-    `<question>${question}</question>`;
+    `<question>${xmlEscape(question)}</question>`;
 
   return { system, user, maxTokens: 350 };
 }
