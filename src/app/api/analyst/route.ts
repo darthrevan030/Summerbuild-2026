@@ -4,9 +4,9 @@ import { requireAuth } from "@/lib/supabase/guards";
 import { enforceRateLimit } from "@/lib/supabase/rate-limit";
 import { getProviderFlags } from "@/lib/supabase/app-config";
 
-export const dynamic = "force-dynamic";
+type SSESend = (payload: object) => void;
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+export const dynamic = "force-dynamic";
 
 // ---------- limits ----------
 const MAX_ASSETS = 30;
@@ -162,6 +162,126 @@ function buildAsk(question: string, holdings: AskHolding[], totalSGD: number) {
   return { system, user, maxTokens: 350 };
 }
 
+// ---------- streaming adapters ----------
+async function streamAnthropic(
+  { system, user, maxTokens, signal, send }: {
+    system: string;
+    user: string;
+    maxTokens: number;
+    signal: AbortSignal;
+    send: SSESend;
+  },
+  req: Request,
+) {
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+  try {
+    const response = client.messages.stream(
+      {
+        model: "claude-sonnet-4-6",
+        max_tokens: maxTokens,
+        system,
+        messages: [{ role: "user", content: user }],
+      },
+      { signal }, // abort upstream when the client disconnects
+    );
+
+    for await (const chunk of response) {
+      if (
+        chunk.type === "content_block_delta" &&
+        chunk.delta.type === "text_delta"
+      ) {
+        send({ type: "text", text: chunk.delta.text });
+      }
+    }
+
+    const final = await response.finalMessage();
+    send({ type: "done", stopReason: final.stop_reason });
+  } catch (err) {
+    if (!signal.aborted) {
+      console.error("anthropic stream error:", err);
+      send({ type: "error" });
+    }
+  }
+}
+
+async function streamOpenRouter(
+  { system, user, maxTokens, signal, send }: {
+    system: string;
+    user: string;
+    maxTokens: number;
+    signal: AbortSignal;
+    send: SSESend;
+  },
+) {
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      signal,
+      headers: {
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "",
+        "X-Title": "Finance Dashboard",
+      },
+      body: JSON.stringify({
+        model: process.env.OPENROUTER_MODEL,
+        max_tokens: maxTokens,
+        stream: true,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      }),
+    });
+
+    if (!res.ok || !res.body) {
+      throw new Error(`OpenRouter returned ${res.status}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let stopReason = "stop";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || ""; // keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+
+        const data = line.slice(6).trim();
+        if (data === "[DONE]") break;
+
+        try {
+          const evt = JSON.parse(data);
+          const delta = evt.choices?.[0]?.delta?.content;
+          if (delta) send({ type: "text", text: delta });
+
+          const reason = evt.choices?.[0]?.finish_reason;
+          if (reason) {
+            stopReason = reason === "length" ? "max_tokens" : "end_turn";
+          }
+        } catch {
+          // malformed frame; skip
+        }
+      }
+    }
+
+    send({ type: "done", stopReason });
+  } catch (err) {
+    if (!signal.aborted) {
+      console.error("openrouter stream error:", err);
+      send({ type: "error" });
+    }
+  }
+}
+
 // ---------- handler ----------
 export async function POST(req: Request) {
   const { error } = await requireAuth();
@@ -172,12 +292,17 @@ export async function POST(req: Request) {
   });
   if (limited) return limited;
 
-  const { anthropic: enabled } = await getProviderFlags();
-  if (!enabled)
+  const flags = await getProviderFlags();
+  const hasOpenRouterKey = !!process.env.OPENROUTER_API_KEY?.trim();
+  const canUseOpenRouter = flags.openrouter && hasOpenRouterKey;
+  const canUseAnthropic = flags.anthropic;
+
+  if (!canUseOpenRouter && !canUseAnthropic) {
     return Response.json(
       { error: "Analyst AI is currently disabled" },
       { status: 503 },
     );
+  }
 
   const raw = await req.json().catch(() => null);
   const parsed = parseBody(raw);
@@ -205,31 +330,10 @@ export async function POST(req: Request) {
       };
 
       try {
-        const response = client.messages.stream(
-          {
-            model: "claude-sonnet-4-6",
-            max_tokens: maxTokens,
-            system,
-            messages: [{ role: "user", content: user }],
-          },
-          { signal: req.signal }, // abort upstream when the client disconnects
-        );
-
-        for await (const chunk of response) {
-          if (
-            chunk.type === "content_block_delta" &&
-            chunk.delta.type === "text_delta"
-          ) {
-            send({ type: "text", text: chunk.delta.text });
-          }
-        }
-
-        const final = await response.finalMessage();
-        send({ type: "done", stopReason: final.stop_reason });
-      } catch (err) {
-        if (!req.signal.aborted) {
-          console.error("analyst stream error:", err);
-          send({ type: "error" });
+        if (canUseOpenRouter) {
+          await streamOpenRouter({ system, user, maxTokens, signal: req.signal, send });
+        } else {
+          await streamAnthropic({ system, user, maxTokens, signal: req.signal, send }, req);
         }
       } finally {
         try {
