@@ -430,8 +430,14 @@ export default async function AdminPage() {
               {
                 code: "anthropic",
                 label: "Anthropic",
-                region: "Analyst AI (Claude)",
+                region: "Analyst AI (Claude) — fallback",
                 active: providerFlags.anthropic,
+              },
+              {
+                code: "openrouter",
+                label: "OpenRouter",
+                region: "Analyst AI (free/cheap models)",
+                active: providerFlags.openrouter,
               },
             ] as {
               code: string;

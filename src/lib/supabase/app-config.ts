@@ -9,13 +9,14 @@ export interface ProviderFlags {
   finnhub:      boolean;
   frankfurter:  boolean;
   anthropic:    boolean;
+  openrouter:   boolean;
   alphavantage: boolean;
   newsapi:      boolean;
 }
 
 const DEFAULT: ProviderFlags = {
   sgx: true, eodhd: true, yahoo: true, coingecko: true, goldapi: true,
-  finnhub: true, frankfurter: true, anthropic: true,
+  finnhub: true, frankfurter: true, anthropic: true, openrouter: true,
   alphavantage: true, newsapi: true,
 };
 
