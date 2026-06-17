@@ -66,13 +66,10 @@ function parseEtfConfirmationNote(text: string): ParseResult {
   const warnings: string[] = [];
 
   // ── Contract number (BSTK…, SSTK…, BSHARE…, etc.) ───────────────────────
-  const contractMatch = text.match(/\b([A-Z]{3,}\d{10,})\b/);
-  if (!contractMatch) {
+  if (!/\b[A-Z]{3,}\d{10,}\b/.test(text)) {
     warnings.push("No contract number found in confirmation note.");
     return { broker: "FSMOne", docType: "etf-confirmation", trades: [], warnings };
   }
-  const contractNo = contractMatch[1];
-  const contractIdx = text.indexOf(contractNo);
 
   // ── Date: any "DD MMM YYYY" in the whole document ────────────────────────
   const dateMatch = text.match(/(\d{2}\s+\w{3,9}\s+\d{4})/);
@@ -88,65 +85,111 @@ function parseEtfConfirmationNote(text: string): ParseResult {
     ? tickerCandidates[tickerCandidates.length - 1][1]
     : "";
 
-  // ── Security name: text on the same logical line as (TICKER) ─────────────
+  // ── Security name + exchange ──────────────────────────────────────────────
   let name = ticker || "Unknown";
   let exchange = "";
 
   if (ticker) {
     const tickerTag = `(${ticker})`;
     const tickerPos = text.lastIndexOf(tickerTag);
-    // Grab up to 300 chars before the ticker paren
-    const before = text.substring(Math.max(0, tickerPos - 300), tickerPos);
-    // Split by newline or 2+ spaces; last non-trivial segment = name
+    const before = text.substring(Math.max(0, tickerPos - 400), tickerPos);
     const segments = before.split(/\n|\r|\s{2,}/).map((s) => s.trim()).filter(Boolean);
+
+    // Pattern: "LSE SS SPDR S&P 500 UCITS", "BSTK...04264 LSE SS SPDR...", or
+    // "LSESS SPDR S&P 500 UCITS" (pdf-parse v1 drops the inter-column space, so
+    // the exchange code is glued to the name with no separator — and no word
+    // boundary either, which is why \s+/\b-anchored matching missed it). We
+    // therefore strip any leading contract number, then match the exchange code
+    // at the START of the segment with optional (\s*) whitespace before the name.
+    const exchPrefixRe = new RegExp(
+      `^(${Object.keys(EXCHANGE_MAP).join("|")})\\s*(.+)`,
+    );
+
+    const nameParts: string[] = [];
     for (let i = segments.length - 1; i >= 0; i--) {
       const seg = segments[i];
-      if (
-        seg.length > 3 &&
-        !EXCHANGE_PATTERN.test(seg) &&
-        !/^\d[\d.,\s]*$/.test(seg) &&
-        !/^(RSP|Cash|Account|SGD|USD|EUR|GBP|HKD|AUD)$/i.test(seg)
-      ) {
-        name = seg;
+
+      // Case A: segment starts (optionally after a contract number) with an
+      // exchange code — possibly glued to the name. Rest is the name start.
+      const segNoContract = seg.replace(/^[A-Z]{3,}\d{10,}\s*/, "");
+      const prefixMatch = segNoContract.match(exchPrefixRe);
+      if (prefixMatch) {
+        exchange = EXCHANGE_MAP[prefixMatch[1]] ?? prefixMatch[1];
+        const namePart = prefixMatch[2].trim();
+        if (namePart) nameParts.unshift(namePart);
         break;
       }
+
+      // Case B: segment IS an exchange code (alone on its own line)
+      const soloExch = EXCHANGE_PATTERN.exec(seg);
+      if (soloExch && seg.trim() === soloExch[1]) {
+        exchange = EXCHANGE_MAP[soloExch[1]] ?? soloExch[1];
+        if (nameParts.length > 0) break;
+        continue;
+      }
+
+      // Case C: non-name delimiter (date, bare number, payment method keyword)
+      const isDelimiter =
+        seg.length <= 2 ||
+        /^\d[\d.,\s]*$/.test(seg) ||
+        /^(RSP|Cash|Account|SGD|USD|EUR|GBP|HKD|AUD)$/i.test(seg) ||
+        /^\d{1,2}\s+\w{3,9}\s+\d{4}$/.test(seg);
+      if (isDelimiter) {
+        if (nameParts.length > 0) break;
+        continue;
+      }
+
+      // Normal name segment
+      nameParts.unshift(seg);
     }
-
-    // Exchange: nearest EXCHANGE_PATTERN match before (TICKER) in the text
-    const exchMatch = EXCHANGE_PATTERN.exec(before);
-    if (exchMatch) exchange = EXCHANGE_MAP[exchMatch[1]] ?? exchMatch[1];
+    if (nameParts.length > 0) name = nameParts.join(" ").trim();
   }
 
-  // Fallback exchange: scan the 500 chars around the contract number
-  if (!exchange) {
-    const contractCtx = text.substring(
-      Math.max(0, contractIdx - 100),
-      contractIdx + 500,
-    );
-    const exchMatch = EXCHANGE_PATTERN.exec(contractCtx);
-    if (exchMatch) exchange = EXCHANGE_MAP[exchMatch[1]] ?? exchMatch[1];
-  }
   if (!exchange) warnings.push("Could not detect exchange.");
 
   // ── Prices: scan the whole document for "CCY AMOUNT" ────────────────────
   const ccyAmounts = [
-    ...text.matchAll(/\b(USD|SGD|EUR|GBP|HKD|AUD)\s+([\d,]+\.\d+)/g),
+    ...text.matchAll(/\b(USD|SGD|EUR|GBP|HKD|AUD)[ \t]*\n?[ \t]*([\d,]+\.\d+)/g),
   ];
 
   let currency = "SGD";
   let price = 0;
+  let units = 0;
   let fxRate = 1;
 
-  if (ccyAmounts.length > 0) {
-    // Prefer the first non-SGD amount as the asset price
-    const priceEntry = ccyAmounts.find((m) => m[1] !== "SGD") ?? ccyAmounts[0];
-    currency = priceEntry[1];
-    price = parseFloat(priceEntry[2].replace(/,/g, ""));
+  const decOf = (s: string) => (s.includes(".") ? s.split(".")[1].length : 0);
+  const nonSgdAmounts = ccyAmounts.filter((m) => m[1] !== "SGD");
+
+  if (nonSgdAmounts.length > 0) {
+    currency = nonSgdAmounts[0][1];
+
+    // Transaction total = first positive non-SGD amount with ≤ 2 decimal places
+    // (FSMOne totals like "759.64"; fees "0.00" are excluded by the > 0 check)
+    const totalEntry = nonSgdAmounts.find(
+      (m) => decOf(m[2]) <= 2 && parseFloat(m[2].replace(/,/g, "")) > 0,
+    );
+
+    // Unit price = non-SGD amount with most decimal places (≥ 4, e.g. "18.365287")
+    const byDp = [...nonSgdAmounts].sort((a, b) => decOf(b[2]) - decOf(a[2]));
+    if (decOf(byDp[0][2]) >= 4) {
+      price = parseFloat(byDp[0][2].replace(/,/g, ""));
+    } else if (totalEntry) {
+      // Unit price is a bare number in the PDF stream (no "USD" on the same line).
+      // It appears immediately before the transaction total in the text.
+      const totalPos = text.indexOf(totalEntry[0]);
+      const beforeTotal = text.substring(Math.max(0, totalPos - 200), totalPos);
+      const bareMatch = beforeTotal.match(/\b(\d+\.\d{4,})\b/);
+      if (bareMatch) price = parseFloat(bareMatch[1]);
+    }
+
+    if (totalEntry && price > 0) {
+      const total = parseFloat(totalEntry[2].replace(/,/g, ""));
+      units = Math.round((total / price) * 10000) / 10000;
+    }
   }
 
-  // ── Units: number immediately before the first CCY amount ────────────────
-  let units = 0;
-  if (ccyAmounts.length > 0) {
+  // ── Units fallback: standalone number before the first CCY match ──────────
+  if (units <= 0 && ccyAmounts.length > 0) {
     const firstCcyPos = text.indexOf(ccyAmounts[0][0]);
     const beforeCcy = text.substring(Math.max(0, firstCcyPos - 200), firstCcyPos);
     const qtyMatch = beforeCcy.match(/\b(\d+\.?\d*)\s*[\n\r\s]*$/);
