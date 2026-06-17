@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/supabase/guards";
+import { enforceRateLimit } from "@/lib/supabase/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { purgeUser, isLastSuperadmin } from "@/lib/supabase/delete-user";
@@ -12,6 +13,9 @@ import { purgeUser, isLastSuperadmin } from "@/lib/supabase/delete-user";
 export async function DELETE() {
   const { user, error: authError } = await requireAuth();
   if (authError) return authError;
+
+  const limited = await enforceRateLimit("account-delete", 3, 60, { failClosed: true });
+  if (limited) return limited;
 
   let adminClient;
   try {

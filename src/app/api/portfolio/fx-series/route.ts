@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/supabase/guards";
+import { enforceRateLimit } from "@/lib/supabase/rate-limit";
 import { fetchHoldings, fetchSnapshots } from "@/lib/supabase/data";
 import { ensureFxHistory } from "@/lib/providers/fx";
 import type { FxSeriesPoint } from "@/types/portfolio";
@@ -47,6 +48,9 @@ function rateAt(sorted: [string, number][], date: string, fallback: number): num
 export async function GET(req: NextRequest) {
   const { user, error } = await requireAuth();
   if (error) return error;
+
+  const limited = await enforceRateLimit("fx-series", 10, 60);
+  if (limited) return limited;
 
   const base = (new URL(req.url).searchParams.get("base") || "SGD").toUpperCase();
   if (!CCY_RE.test(base))

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/guards";
+import { enforceRateLimit } from "@/lib/supabase/rate-limit";
 import {
   fetchHoldings,
   fetchSnapshots,
@@ -104,6 +105,9 @@ function fillForward(
 export async function POST() {
   const { user, error: authError } = await requireAuth();
   if (authError) return authError;
+
+  const limited = await enforceRateLimit("backfill", 2, 60, { failClosed: true });
+  if (limited) return limited;
 
   const holdings = await fetchHoldings(user.id);
   if (holdings.length === 0)

@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/supabase/guards";
+import { enforceRateLimit } from "@/lib/supabase/rate-limit";
 import { parsePdfText } from "@/lib/pdf-parsers";
 import { fetchEodhdAssetTypes } from "@/lib/prices";
 
 export async function POST(req: NextRequest) {
   const { error } = await requireAuth();
   if (error) return error;
+
+  const limited = await enforceRateLimit("parse-pdf", 5, 60, { failClosed: true });
+  if (limited) return limited;
 
   let formData: FormData;
   try {

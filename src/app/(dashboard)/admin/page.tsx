@@ -392,6 +392,12 @@ export default async function AdminPage() {
           {(
             [
               {
+                code: "sgx",
+                label: "SGX",
+                region: "SGD-denominated equities — direct exchange feed",
+                active: providerFlags.sgx,
+              },
+              {
                 code: "eodhd",
                 label: "EODHD",
                 region: "Equities — primary (limited daily quota)",
@@ -430,13 +436,13 @@ export default async function AdminPage() {
               {
                 code: "anthropic",
                 label: "Anthropic",
-                region: "Analyst AI (Claude) — fallback",
+                region: "Analyst AI (Claude) — primary",
                 active: providerFlags.anthropic,
               },
               {
                 code: "openrouter",
                 label: "OpenRouter",
-                region: "Analyst AI (free/cheap models)",
+                region: "Analyst AI override — cheaper models, requires OPENROUTER_API_KEY",
                 active: providerFlags.openrouter,
               },
             ] as {
@@ -465,22 +471,16 @@ export default async function AdminPage() {
           {(
             [
               {
-                code: "finnhub_news",
-                label: "Finnhub News",
-                region: "US equities & major global stocks — primary news source",
-                active: providerFlags.finnhub,
-              },
-              {
                 code: "alphavantage",
                 label: "Alpha Vantage",
                 region: "Non-US equities, crypto, gold — fallback (25 req/day free)",
-                active: providerFlags.alphavantage ?? true,
+                active: providerFlags.alphavantage,
               },
               {
                 code: "newsapi",
                 label: "NewsAPI",
                 region: "Keyword search across finance domains — last resort (1000 req/day free)",
-                active: providerFlags.newsapi ?? true,
+                active: providerFlags.newsapi,
               },
             ] as {
               code: string;

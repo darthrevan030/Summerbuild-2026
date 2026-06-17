@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/supabase/guards";
+import { enforceRateLimit } from "@/lib/supabase/rate-limit";
 import { getProviderFlags } from "@/lib/supabase/app-config";
 
 const REVALIDATE_SECONDS = 3600;
@@ -8,6 +9,9 @@ const CCY_RE = /^[A-Z]{3}$/;
 export async function GET(req: NextRequest) {
   const { error } = await requireAuth();
   if (error) return error;
+
+  const limited = await enforceRateLimit("fx-candles", 20, 60);
+  if (limited) return limited;
 
   const ccy = req.nextUrl.searchParams.get("ccy")?.toUpperCase();
   const base = (req.nextUrl.searchParams.get("base") ?? "SGD").toUpperCase();

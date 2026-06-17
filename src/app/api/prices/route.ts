@@ -1,5 +1,6 @@
 import { fetchLivePrices } from "@/lib/prices";
 import { requireAuth } from "@/lib/supabase/guards";
+import { enforceRateLimit } from "@/lib/supabase/rate-limit";
 import { getProviderFlags } from "@/lib/supabase/app-config";
 
 const MAX_TICKERS = 50;
@@ -8,6 +9,9 @@ const TICKER_RE = /^[A-Za-z0-9.\-:]{1,20}$/;
 export async function POST(req: Request) {
   const { error } = await requireAuth();
   if (error) return error;
+
+  const limited = await enforceRateLimit("prices", 10, 60, { failClosed: true });
+  if (limited) return limited;
 
   const body = await req.json().catch(() => null);
   const tickers = body?.tickers;

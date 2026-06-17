@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/guards";
 
 const ALLOWED_KEYS = new Set([
+  "sgx",
   "eodhd",
   "yahoo",
   "coingecko",
@@ -9,6 +10,9 @@ const ALLOWED_KEYS = new Set([
   "finnhub",
   "frankfurter",
   "anthropic",
+  "openrouter",
+  "alphavantage",
+  "newsapi",
 ]);
 
 export async function PATCH(
