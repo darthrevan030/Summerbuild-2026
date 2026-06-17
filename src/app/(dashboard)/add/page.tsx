@@ -8,6 +8,7 @@ import { fetchFx } from "@/lib/api-client";
 import { toast } from "sonner";
 import { useCurrencies } from "@/hooks/useCurrencies";
 import { useExchanges } from "@/hooks/useExchanges";
+import type { ParsedTrade } from "@/lib/pdf-parsers";
 
 const ASSET_TYPES = ["Equity", "ETF", "REIT", "Gold", "RE", "Bond", "T-Bill"];
 
@@ -539,6 +540,7 @@ function ManualForm() {
 function ImportPanel() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [importMode, setImportMode] = useState<"csv" | "pdf">("csv");
   const [drag, setDrag] = useState(false);
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<CsvRow[]>([]);
@@ -647,73 +649,308 @@ function ImportPanel() {
 
   return (
     <div className="card animate-reveal px-5 py-4.5 max-bp768:overflow-hidden max-bp480:p-3.5 max-bp380:p-3" style={{ animationDelay: ".06s" }}>
-      <div className="flex items-baseline justify-between mb-4 max-bp600:flex-wrap max-bp600:gap-2 max-bp600:items-center">
+      <div className="flex items-center justify-between mb-4 max-bp600:flex-wrap max-bp600:gap-2">
         <span className="text-[13px] font-semibold text-primary tracking-[.01em]">Import &amp; Backup</span>
-        <span className="font-ui text-secondary text-[11px]">CSV · XLSX · JSON</span>
-      </div>
-      <input ref={fileRef} type="file" accept=".csv,.txt" style={{ display: "none" }}
-        onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
-      <div
-        className={"flex flex-col items-center gap-[7px] text-center border-[1.5px] border-dashed rounded-[13px] cursor-pointer px-5 py-[30px] [transition:background_.2s,border-color_.2s] " + (drag ? "bg-elevated border-gold" : "bg-surface border-gold-soft hover:bg-elevated hover:border-gold")}
-        onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
-        onDragLeave={() => setDrag(false)}
-        onDrop={handleDrop}
-        onClick={() => fileRef.current?.click()}
-        style={{ cursor: "pointer" }}>
-        <Icon name="upload" size={26} style={{ color: "var(--gold)" }} />
-        <div className="font-ui text-[14px] font-semibold mt-1">Drop CSV here</div>
-        <div className="font-ui text-secondary">or click to browse</div>
-        <div className="font-ui text-secondary text-[11px] tracking-[.04em] mt-2">Supported: Tiger · Saxo · DBS Vickers · IBKR · Moomoo</div>
-      </div>
-      {headers.length > 0 && (
-        <div className="mt-[18px] flex flex-col gap-[9px]">
-          <div className="flex justify-between text-[10.5px] uppercase tracking-[.08em] pb-1 font-ui text-secondary">
-            <span>Your Column</span><span>Maps To</span>
-          </div>
-          {headers.map((h) => (
-            <div className="grid grid-cols-[1fr_18px_1fr] items-center gap-2.5" key={h}>
-              <span className="font-mono text-[12.5px] text-secondary">&quot;{h}&quot;</span>
-              <Icon name="arrow" size={13} className="text-muted" />
-              <div className="relative">
-                <select value={mapping[h] ?? "(ignore)"}
-                  onChange={(e) => setMapping((m) => ({ ...m, [h]: e.target.value }))}
-                  style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }}>
-                  {FIELD_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
-                <span className="font-ui">{mapping[h] ?? "(ignore)"}</span>
-                <Icon name="chevron" size={14} />
-              </div>
-            </div>
+        <div className="flex gap-1.5">
+          {(["csv", "pdf"] as const).map((mode) => (
+            <button key={mode}
+              className={"cursor-pointer rounded-lg border px-[11px] py-[5px] font-ui text-[11px] uppercase tracking-[.06em] transition-all duration-150 " + (importMode === mode ? "border-gold-soft bg-wash text-gold" : "border-subtle bg-surface text-secondary hover:border-muted hover:text-primary")}
+              onClick={() => setImportMode(mode)}>
+              {mode.toUpperCase()}
+            </button>
           ))}
-          <div className="flex items-center gap-[7px] text-[12px] text-secondary mt-1 font-ui">
-            <Icon name="check" size={13} style={{ color: "var(--gain)" }} />
-            {Object.values(mapping).filter((v) => v !== "(ignore)").length} of {headers.length} columns mapped
+        </div>
+      </div>
+
+      {importMode === "csv" && (
+        <>
+          <input ref={fileRef} type="file" accept=".csv,.txt" style={{ display: "none" }}
+            onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
+          <div
+            className={"flex flex-col items-center gap-[7px] text-center border-[1.5px] border-dashed rounded-[13px] cursor-pointer px-5 py-[30px] [transition:background_.2s,border-color_.2s] " + (drag ? "bg-elevated border-gold" : "bg-surface border-gold-soft hover:bg-elevated hover:border-gold")}
+            onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+            onDragLeave={() => setDrag(false)}
+            onDrop={handleDrop}
+            onClick={() => fileRef.current?.click()}
+            style={{ cursor: "pointer" }}>
+            <Icon name="upload" size={26} style={{ color: "var(--gold)" }} />
+            <div className="font-ui text-[14px] font-semibold mt-1">Drop CSV here</div>
+            <div className="font-ui text-secondary">or click to browse</div>
+            <div className="font-ui text-secondary text-[11px] tracking-[.04em] mt-2">Supported: Tiger · Saxo · DBS Vickers · IBKR · Moomoo</div>
           </div>
-          {result && <div className="font-ui" style={{ color: result.includes("failed") ? "var(--loss)" : "var(--gain)", marginTop: 8 }}>{result}</div>}
-          <button
-            className="col-span-full mt-1 flex items-center justify-center gap-2 cursor-pointer rounded-[10px] bg-gold p-[13px] font-ui text-[13.5px] font-semibold text-[#15130c] [transition:filter_.15s,transform_.1s] hover:brightness-[1.08] active:translate-y-px disabled:opacity-60 disabled:saturate-[.7] disabled:cursor-default"
-            style={{ marginTop: 8 }} onClick={handleImport} disabled={importing || rows.length === 0}>
-            <Icon name="upload" size={15} />
-            {importing ? "Importing…" : `Import ${rows.length} rows`}
-          </button>
+          {headers.length > 0 && (
+            <div className="mt-[18px] flex flex-col gap-[9px]">
+              <div className="flex justify-between text-[10.5px] uppercase tracking-[.08em] pb-1 font-ui text-secondary">
+                <span>Your Column</span><span>Maps To</span>
+              </div>
+              {headers.map((h) => (
+                <div className="grid grid-cols-[1fr_18px_1fr] items-center gap-2.5" key={h}>
+                  <span className="font-mono text-[12.5px] text-secondary">&quot;{h}&quot;</span>
+                  <Icon name="arrow" size={13} className="text-muted" />
+                  <div className="relative">
+                    <select value={mapping[h] ?? "(ignore)"}
+                      onChange={(e) => setMapping((m) => ({ ...m, [h]: e.target.value }))}
+                      style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }}>
+                      {FIELD_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                    <span className="font-ui">{mapping[h] ?? "(ignore)"}</span>
+                    <Icon name="chevron" size={14} />
+                  </div>
+                </div>
+              ))}
+              <div className="flex items-center gap-[7px] text-[12px] text-secondary mt-1 font-ui">
+                <Icon name="check" size={13} style={{ color: "var(--gain)" }} />
+                {Object.values(mapping).filter((v) => v !== "(ignore)").length} of {headers.length} columns mapped
+              </div>
+              {result && <div className="font-ui" style={{ color: result.includes("failed") ? "var(--loss)" : "var(--gain)", marginTop: 8 }}>{result}</div>}
+              <button
+                className="col-span-full mt-1 flex items-center justify-center gap-2 cursor-pointer rounded-[10px] bg-gold p-[13px] font-ui text-[13.5px] font-semibold text-[#15130c] [transition:filter_.15s,transform_.1s] hover:brightness-[1.08] active:translate-y-px disabled:opacity-60 disabled:saturate-[.7] disabled:cursor-default"
+                style={{ marginTop: 8 }} onClick={handleImport} disabled={importing || rows.length === 0}>
+                <Icon name="upload" size={15} />
+                {importing ? "Importing…" : `Import ${rows.length} rows`}
+              </button>
+            </div>
+          )}
+          <div className="flex gap-3 mt-5">
+            <button
+              className="flex flex-1 items-center justify-center gap-[7px] cursor-pointer rounded-[9px] border border-subtle p-[11px] font-ui text-[12.5px] text-secondary transition-all duration-150 hover:border-gold-soft hover:text-primary light:border-black/[.12]"
+              onClick={() => {
+                fetch("/api/holdings").then((r) => r.json()).then((data) => {
+                  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+                  const a = document.createElement("a"); a.href = url; a.download = "portfolio-backup.json"; a.click(); URL.revokeObjectURL(url);
+                });
+              }}>
+              <Icon name="download" size={15} />
+              Export JSON
+            </button>
+          </div>
+          <div className="font-ui text-secondary text-[11px] tracking-[.04em] text-center mt-3">
+            Your data is stored in Supabase — export anytime to keep a local copy.
+          </div>
+        </>
+      )}
+
+      {importMode === "pdf" && <PdfImportPanel />}
+    </div>
+  );
+}
+
+interface PdfParseResult {
+  broker: string;
+  docType: string;
+  trades: ParsedTrade[];
+  warnings: string[];
+}
+
+type EditableRow = ParsedTrade & { _key: number };
+
+const PDF_COLS: { key: keyof ParsedTrade; label: string; w: number; type?: string }[] = [
+  { key: "name",        label: "Name",    w: 150 },
+  { key: "ticker",      label: "Ticker",  w: 70,  },
+  { key: "exchange",    label: "Exch",    w: 55,  },
+  { key: "asset_type",  label: "Type",    w: 60,  },
+  { key: "units",       label: "Units",   w: 70,  type: "number" },
+  { key: "currency",    label: "CCY",     w: 50,  },
+  { key: "buy_price",   label: "Price",   w: 80,  type: "number" },
+  { key: "buy_date",    label: "Date",    w: 108, type: "date" },
+  { key: "buy_fx_rate", label: "FX Rate", w: 70,  type: "number" },
+];
+
+function PdfImportPanel() {
+  const router = useRouter();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [drag, setDrag] = useState(false);
+  const [parsing, setParsing] = useState(false);
+  const [result, setResult] = useState<PdfParseResult | null>(null);
+  const [parseError, setParseError] = useState("");
+  const [rows, setRows] = useState<EditableRow[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState("");
+
+  const handleFile = async (file: File) => {
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      setParseError("Please select a PDF file.");
+      return;
+    }
+    setParsing(true);
+    setResult(null);
+    setParseError("");
+    setImportResult("");
+    setRows([]);
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch("/api/parse-pdf", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Parse failed");
+      const parsed = data as PdfParseResult;
+      setResult(parsed);
+      setRows(parsed.trades.map((t, i) => ({ ...t, _key: i })));
+    } catch (e) {
+      setParseError(e instanceof Error ? e.message : "Parse failed");
+    } finally {
+      setParsing(false);
+    }
+  };
+
+  const updateRow = (idx: number, key: keyof ParsedTrade, value: string | number) =>
+    setRows((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], [key]: value };
+      return next;
+    });
+
+  const removeRow = (idx: number) => setRows((prev) => prev.filter((_, i) => i !== idx));
+
+  const handleImport = async () => {
+    if (!rows.length) return;
+    setImporting(true);
+    setImportResult("");
+    let ok = 0, fail = 0;
+    for (const row of rows) {
+      if (!row.name || !row.buy_price || !row.units) { fail++; continue; }
+      const base = String(row.ticker).toUpperCase() || "—";
+      const ticker = base !== "—" && row.exchange ? `${base}.${row.exchange}` : base;
+      try {
+        const res = await fetch("/api/holdings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ticker,
+            name: row.name,
+            asset_type: row.asset_type || "Equity",
+            broker: row.broker || "Imported",
+            strategy: "long_term",
+            units: row.units,
+            currency: row.currency,
+            flag: CCY_FLAGS[row.currency] ?? "🌐",
+            icon: TYPE_ICON[row.asset_type] ?? "briefcase",
+            buy_price: row.buy_price,
+            buy_date: row.buy_date,
+            buy_fx_rate: row.buy_fx_rate || 1,
+            current_price: row.buy_price,
+            current_fx_rate: row.buy_fx_rate || 1,
+            spark_data: [row.buy_price],
+            source: row.source || "",
+            fees: row.fees ?? 0,
+            transaction_type: "buy",
+          }),
+        });
+        if (res.ok) ok++; else fail++;
+      } catch { fail++; }
+    }
+    const summary = `Imported ${ok} holding${ok !== 1 ? "s" : ""}${fail > 0 ? ` · ${fail} failed` : ""}.`;
+    setImportResult(summary);
+    setImporting(false);
+    if (fail > 0) toast.error(summary); else if (ok > 0) toast.success(summary);
+    if (ok > 0) { setRows([]); setResult(null); router.refresh(); }
+  };
+
+  const reset = () => { setResult(null); setRows([]); setParseError(""); setImportResult(""); };
+
+  return (
+    <div>
+      <input ref={fileRef} type="file" accept=".pdf" style={{ display: "none" }}
+        onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
+
+      {!result && !parsing && (
+        <div
+          className={"flex flex-col items-center gap-1.75 text-center border-[1.5px] border-dashed rounded-[13px] cursor-pointer px-5 py-7.5 [transition:background_.2s,border-color_.2s] " + (drag ? "bg-elevated border-gold" : "bg-surface border-gold-soft hover:bg-elevated hover:border-gold")}
+          onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+          onDragLeave={() => setDrag(false)}
+          onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
+          onClick={() => fileRef.current?.click()}>
+          <Icon name="file" size={26} style={{ color: "var(--gold)" }} />
+          <div className="font-ui text-[14px] font-semibold mt-1">Drop PDF here</div>
+          <div className="font-ui text-secondary">or click to browse</div>
+          <div className="font-ui text-secondary text-[11px] tracking-[.04em] mt-2">Supported: FSMOne · DBS Vickers</div>
         </div>
       )}
-      <div className="flex gap-3 mt-5">
-        <button
-          className="flex flex-1 items-center justify-center gap-[7px] cursor-pointer rounded-[9px] border border-subtle p-[11px] font-ui text-[12.5px] text-secondary transition-all duration-150 hover:border-gold-soft hover:text-primary light:border-black/[.12]"
-          onClick={() => {
-            fetch("/api/holdings").then((r) => r.json()).then((data) => {
-              const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
-              const a = document.createElement("a"); a.href = url; a.download = "portfolio-backup.json"; a.click(); URL.revokeObjectURL(url);
-            });
-          }}>
-          <Icon name="download" size={15} />
-          Export JSON
-        </button>
-      </div>
-      <div className="font-ui text-secondary text-[11px] tracking-[.04em] text-center mt-3">
-        Your data is stored in Supabase — export anytime to keep a local copy.
-      </div>
+
+      {parsing && (
+        <div className="flex flex-col items-center gap-3 py-10 text-secondary font-ui text-[13px]">
+          <Icon name="refresh" size={22} className="animate-spin" style={{ color: "var(--gold)" }} />
+          Parsing statement…
+        </div>
+      )}
+
+      {parseError && (
+        <div className="font-ui text-[12.5px] mt-2" style={{ color: "var(--loss)" }}>{parseError}</div>
+      )}
+
+      {result && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-ui text-[11px] px-2 py-0.5 rounded-md bg-elevated text-secondary">{result.broker}</span>
+            <span className="font-ui text-[11px] px-2 py-0.5 rounded-md bg-elevated text-secondary capitalize">{result.docType}</span>
+            <span className="font-ui text-[11px] text-muted">{rows.length} row{rows.length !== 1 ? "s" : ""}</span>
+            <button className="font-ui text-[11px] text-muted hover:text-primary cursor-pointer ml-auto" onClick={reset}>
+              ✕ clear
+            </button>
+          </div>
+
+          {result.warnings.length > 0 && (
+            <div className="rounded-[9px] border border-subtle bg-elevated px-3 py-2 flex flex-col gap-1">
+              {result.warnings.map((w, i) => (
+                <div key={i} className="font-ui text-[11px]" style={{ color: "var(--gold)" }}>⚠ {w}</div>
+              ))}
+            </div>
+          )}
+
+          {rows.length === 0 && !importResult && (
+            <div className="font-ui text-secondary text-[13px]">No trades extracted.</div>
+          )}
+
+          {rows.length > 0 && (
+            <div className="overflow-x-auto -mx-1 px-1">
+              <table className="text-left" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr className="font-ui text-[10px] uppercase tracking-[.08em] text-secondary">
+                    {PDF_COLS.map((c) => <th key={c.key} style={{ padding: "4px 4px 8px", whiteSpace: "nowrap" }}>{c.label}</th>)}
+                    <th style={{ padding: "4px 4px 8px" }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, i) => (
+                    <tr key={row._key} style={{ borderTop: "1px solid var(--border-subtle)" }}>
+                      {PDF_COLS.map(({ key, w, type }) => (
+                        <td key={key} style={{ padding: "4px 3px" }}>
+                          <input
+                            className="font-mono text-[11px] rounded-md bg-elevated border border-subtle px-1.5 py-1 focus:outline-none focus:border-gold"
+                            style={{ width: w, minWidth: 36 }}
+                            type={type ?? "text"}
+                            value={String(row[key] ?? "")}
+                            step={type === "number" ? "any" : undefined}
+                            onChange={(e) => updateRow(i, key, type === "number" ? parseFloat(e.target.value) || 0 : e.target.value)}
+                          />
+                        </td>
+                      ))}
+                      <td style={{ padding: "4px 3px" }}>
+                        <button className="font-ui text-[11px] text-muted hover:text-loss cursor-pointer px-1" onClick={() => removeRow(i)}>✕</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {importResult && (
+            <div className="font-ui text-[12px]" style={{ color: importResult.includes("failed") ? "var(--loss)" : "var(--gain)" }}>
+              {importResult}
+            </div>
+          )}
+
+          {rows.length > 0 && (
+            <button
+              className="flex items-center justify-center gap-2 cursor-pointer rounded-[10px] bg-gold p-3.25 font-ui text-[13.5px] font-semibold text-[#15130c] [transition:filter_.15s,transform_.1s] hover:brightness-[1.08] active:translate-y-px disabled:opacity-60 disabled:saturate-[.7] disabled:cursor-default"
+              onClick={handleImport} disabled={importing}>
+              <Icon name="upload" size={15} />
+              {importing ? "Importing…" : `Import ${rows.length} holding${rows.length !== 1 ? "s" : ""}`}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
