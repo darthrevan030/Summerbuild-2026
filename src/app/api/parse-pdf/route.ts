@@ -37,45 +37,12 @@ export async function POST(req: NextRequest) {
 
   if (isPdf) {
     try {
-      // pdfjs-dist v5 calls `new DOMMatrix()` at module init — a browser global
-      // absent in Node.js. Stub it before loading so the module initialises, then
-      // use getTextContent() which never exercises the real matrix math path.
-      if (typeof globalThis.DOMMatrix === "undefined") {
-        (globalThis as unknown as Record<string, unknown>).DOMMatrix = class {
-          a = 1; b = 0; c = 0; d = 1; e = 0; f = 0;
-          is2D = true; isIdentity = true;
-          constructor(_?: unknown) {}
-          scale() { return this; }
-          translate() { return this; }
-          multiply() { return this; }
-          inverse() { return this; }
-          transformPoint(p: Record<string, number>) { return { x: p.x ?? 0, y: p.y ?? 0, z: 0, w: 1 }; }
-          toFloat32Array() { return new Float32Array(16); }
-          toFloat64Array() { return new Float64Array(16); }
-          toString() { return "matrix(1, 0, 0, 1, 0, 0)"; }
-          toJSON() { return {}; }
-        };
-      }
-      const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
-      pdfjsLib.GlobalWorkerOptions.workerSrc = "";
-      const doc = await pdfjsLib.getDocument({
-        data: new Uint8Array(buffer),
-        disableFontFace: true,
-        verbosity: 0,
-      }).promise;
-      const pageTexts: string[] = [];
-      for (let i = 1; i <= doc.numPages; i++) {
-        const page = await doc.getPage(i);
-        const content = await page.getTextContent();
-        pageTexts.push(
-          content.items
-            .map((item) => ("str" in item ? (item as { str: string }).str : ""))
-            .join(" "),
-        );
-        page.cleanup();
-      }
-      await doc.destroy();
-      pdfText = pageTexts.join("\n");
+      // pdf-parse v1 bundles pdfjs-dist v2 internally — no native deps, no
+      // DOMMatrix requirement, works on Vercel. serverExternalPackages prevents
+      // webpack from bundling it (which would break its internal require() calls).
+      const pdfParse = (await import("pdf-parse")).default;
+      const data = await pdfParse(buffer);
+      pdfText = data.text;
     } catch (err) {
       console.error("[parse-pdf] PDF parsing failed:", err);
       return NextResponse.json(
