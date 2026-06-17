@@ -45,43 +45,16 @@ Live prices pull from global exchanges via EODHD (equities), CoinGecko (crypto),
 
 ## Architecture
 
-```mermaid
-graph TD
-    Browser["Browser\n(React 19 client)"]
-    RSC["Next.js 16\nRSC layout.tsx"]
-    API["Next.js 16\nAPI Routes /api/*"]
-    Proxy["proxy.ts\n(Next.js 16 middleware)\nauth gate + CSP"]
-    SupaDB[("Supabase Postgres\nRLS-enforced")]
-    SupaAuth["Supabase Auth\nPKCE sessions"]
-    PortfolioCtx["PortfolioContext\nglobal client state"]
+![Vantage system architecture overview](docs/vantage_architecture_overview.svg)
 
-    EODHD["EODHD\nGlobal equity prices"]
-    CoinGecko["CoinGecko\nCrypto prices + sparklines"]
-    GoldAPI["GoldAPI\nXAU/USD spot"]
-    Finnhub["Finnhub\nEquity + FX sparklines"]
-    Frankfurter["Frankfurter\nLive FX rates — free"]
-    Anthropic["Anthropic\nClaude Sonnet 4.6 (SSE)"]
-    OpenRouter["OpenRouter\nAny model (SSE)"]
+The diagram above shows the four-layer stack. From top to bottom:
 
-    Browser -->|"page request"| RSC
-    RSC -->|"cookie session"| SupaAuth
-    RSC -->|"fetchHoldings (server)"| SupaDB
-    RSC -->|"hydrates"| PortfolioCtx
-    PortfolioCtx -->|"usePortfolio()"| Browser
-
-    Browser -->|"mutations + data fetches"| Proxy
-    Proxy -->|"requireAuth / requireAdmin"| SupaAuth
-    Proxy -->|"passes to"| API
-
-    API -->|"holdings CRUD"| SupaDB
-    API -->|"live equity prices"| EODHD
-    API -->|"crypto prices"| CoinGecko
-    API -->|"gold spot"| GoldAPI
-    API -->|"sparklines"| Finnhub
-    API -->|"FX rates"| Frankfurter
-    API -->|"analysis stream"| Anthropic
-    API -->|"analysis stream"| OpenRouter
-```
+| Layer | What lives here |
+|---|---|
+| **Browser** | React 19 client — dashboard tabs read pre-computed state from `PortfolioContext`, no client-side data fetching for the initial render |
+| **Next.js 16 on Vercel** | Two execution contexts: React Server Components (purple) hydrate all dashboard data before the page loads; API routes (red/orange) handle mutations, price refreshes, and the AI analyst stream |
+| **Supabase** | Postgres with row-level security — three logical buckets: Auth (Google OAuth + magic link, PKCE), user data (holdings, settings, FX cache), and platform data (audit log, rate limits) |
+| **External services** | Market data providers (EODHD, SGX, Yahoo Finance, CoinGecko, GoldAPI, Frankfurter, Finnhub) on the left; dual-provider AI analyst (Anthropic ↔ OpenRouter, admin-toggled) on the right |
 
 ### Data flow in detail
 
@@ -106,9 +79,23 @@ Prices are stored directly on the `holdings` row with a `price_refreshed_at` tim
 
 On refresh, the route also reads each ticker's authoritative currency from Yahoo Finance and corrects any drift in the `instruments` table (the auto-heal pass).
 
-**FX conversion**
+#### FX conversion and gain decomposition
 
 All monetary values in the database are stored in **SGD**. The conversion to the user's selected base currency happens entirely client-side using the `baseFxRates` map loaded at startup. Switching currency is instant — no re-fetch required.
+
+Independently, the app decomposes each holding's gain into two additive parts — how much came from the asset moving vs. how much came from the exchange rate moving:
+
+![How Vantage computes FX-vs-asset gain for a holding](docs/vantage_fx_attribution_flow.svg)
+
+The native price (e.g. AAPL in USD from EODHD) and the FX rate (USD/SGD from Frankfurter) are fetched in parallel, then combined to produce a single SGD value. Gain decomposition then holds one variable constant at a time:
+
+```text
+assetGain = (currentPrice − buyPrice) × units × currentFxRate   // FX held at today's rate
+fxGain    = buyPrice × units × (currentFxRate − buyFxRate)       // price held at buy price
+totalGain = assetGain + fxGain
+```
+
+Both figures surface in the Holdings inspector card and drive the dumbbell waterfall in the FX Lab tab.
 
 **AI analysis (dual-provider)**
 
