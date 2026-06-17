@@ -43,6 +43,9 @@ function parseTradeRows(text: string, year: string): ParsedTrade[] {
       name: ticker,
       ticker,
       exchange,
+      // DBS contract notes carry no asset descriptor — default to Equity here;
+      // the parse-pdf route upgrades ETFs via EODHD (fetchEodhdAssetTypes), and
+      // the price-refresh auto-heal corrects any that slip through.
       asset_type: "Equity",
       broker: "DBS Vickers",
       units,

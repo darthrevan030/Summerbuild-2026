@@ -344,6 +344,27 @@ export async function correctInstrumentCurrency(
   if (error) console.error("[correctInstrumentCurrency]", error.message);
 }
 
+// Repair an instrument's stored asset_type by symbol, mirroring
+// correctInstrumentCurrency. Uses the admin client because instruments are
+// shared across users. Scoped by both symbol AND the old (wrong) asset_type so
+// an already-correct row is never clobbered. The refresh route only ever calls
+// this to upgrade a mis-stored security to "ETF" (the one quoteType Yahoo
+// reports unambiguously); see mapYahooQuoteType in prices.ts for why we never
+// heal toward "Equity".
+export async function correctInstrumentAssetType(
+  symbol: string,
+  fromAssetType: string,
+  toAssetType: string,
+): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("instruments")
+    .update({ asset_type: toAssetType })
+    .eq("symbol", symbol)
+    .eq("asset_type", fromAssetType);
+  if (error) console.error("[correctInstrumentAssetType]", error.message);
+}
+
 // ── Lot writes (user data → user-scoped client, RLS enforced) ─────────────────
 
 export interface LotInput {

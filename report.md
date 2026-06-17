@@ -78,6 +78,8 @@ If the ONLY result is the line where it's defined, it's dead. If there are other
 
 | 15 | Migration history is 10+ incremental files — hard to reproduce on a fresh Supabase project | `supabase/migrations/2026*.sql` — every incremental change since June 2026 is a separate file. A new account needs to apply all of them in order. The plan is to consolidate them into a single `00000000000000_baseline.sql` that contains the full schema in dependency order, all RLS policies, functions, grants, and seed data. See `C:\Users\smart\.claude\plans\i-think-the-main-calm-axolotl.md` §8. |
 
+| 16 | Asset-type classification at PDF import has **no inline Yahoo fallback** | `src/app/api/parse-pdf/route.ts` enriches asset types via EODHD only (`fetchEodhdAssetTypes` in `prices.ts`). If EODHD is unconfigured/down/returns no match, the type stays at the parser default (`"Equity"` for DBS Vickers) until the holding's **next price refresh**, when the Yahoo-based auto-heal (`fetchTickerMeta` → `correctInstrumentAssetType`) upgrades it. To make the type correct *the instant the import preview renders*, chain a Yahoo lookup after EODHD in the route for tickers EODHD didn't resolve. **Caveat:** EODHD here uses the exchange-agnostic *search* API (matches by ticker code), but Yahoo's `quote()` needs an exchange-correct symbol — `fetchTickerMeta` currently derives the symbol from *currency*, which misroutes currency≠exchange cases like VWRA (USD-denominated, LSE-listed). An inline Yahoo fallback must build the Yahoo symbol from the parsed trade's `exchange` field, not its currency. Keep the same ETF-only safety rule (never heal toward `Equity`, or REITs get clobbered). |
+
 ### C. Boilerplate (the same logic written by hand over and over)
 
 | # | Problem | Where |

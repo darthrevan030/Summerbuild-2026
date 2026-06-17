@@ -4,13 +4,15 @@ import {
   updateFxRate,
   recordSnapshot,
   correctInstrumentCurrency,
+  correctInstrumentAssetType,
 } from "@/lib/supabase/data";
 import {
   fetchLivePrices,
   fetchLiveFxRates,
   fetchCryptoSparks,
   fetchEquitySparks,
-  fetchTickerCurrencies,
+  fetchTickerMeta,
+  type TickerMeta,
 } from "@/lib/prices";
 import { requireAuth } from "@/lib/supabase/guards";
 import { enforceRateLimit } from "@/lib/supabase/rate-limit";
@@ -59,7 +61,7 @@ export async function POST() {
 
   const providers = await getProviderFlags();
 
-  const [livePrices, liveFxRates, cryptoSparks, equitySparks, liveCurrencies] =
+  const [livePrices, liveFxRates, cryptoSparks, equitySparks, liveMeta] =
     await Promise.all([
       fetchLivePrices(tickers, tickerCurrency, providers),
       providers.frankfurter
@@ -72,8 +74,8 @@ export async function POST() {
         ? fetchEquitySparks(tickers, tickerCurrency)
         : Promise.resolve({} as Record<string, number[]>),
       providers.yahoo
-        ? fetchTickerCurrencies(tickers, tickerCurrency)
-        : Promise.resolve({} as Record<string, string>),
+        ? fetchTickerMeta(tickers, tickerCurrency)
+        : Promise.resolve({} as Record<string, TickerMeta>),
     ]);
 
   // Auto-heal currencies guessed from the exchange. We only correct when the
@@ -84,7 +86,7 @@ export async function POST() {
   const corrected = new Set<string>();
   await Promise.all(
     staleSymbols.map((h) => {
-      const detected = liveCurrencies[h.ticker];
+      const detected = liveMeta[h.ticker]?.currency;
       if (
         !detected ||
         detected === h.currency ||
@@ -103,6 +105,18 @@ export async function POST() {
     }),
   );
   for (const c of corrected) if (c !== "SGD" && !currencies.includes(c)) currencies.push(c);
+
+  // Auto-heal asset types mis-stored at import time — e.g. an ETF defaulted to
+  // "Equity" by the DBS Vickers parser or a manual add. fetchTickerMeta only
+  // reports the unambiguous "ETF" signal (never "Equity"), so this can only
+  // upgrade a mislabelled ETF and can't clobber a correctly-set REIT/Gold/Bond.
+  await Promise.all(
+    staleSymbols.map((h) => {
+      const detected = liveMeta[h.ticker]?.assetType;
+      if (!detected || detected === h.assetType) return Promise.resolve();
+      return correctInstrumentAssetType(h.ticker, h.assetType, detected);
+    }),
+  );
 
   // 1. Update the shared price cache — one write per symbol
   await Promise.all(

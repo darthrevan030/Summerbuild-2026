@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/supabase/guards";
 import { parsePdfText } from "@/lib/pdf-parsers";
+import { fetchEodhdAssetTypes } from "@/lib/prices";
 
 export async function POST(req: NextRequest) {
   const { error } = await requireAuth();
@@ -76,5 +77,21 @@ export async function POST(req: NextRequest) {
   }
 
   const result = parsePdfText(pdfText);
+
+  // Enrich asset types from EODHD: broker statements (esp. DBS Vickers contract
+  // notes) often lack an asset descriptor, so an ETF lands as "Equity". This
+  // only ever upgrades to ETF (EODHD reports REITs as stock), so it never
+  // clobbers a type the parser detected from statement text. Best-effort — a
+  // failure or missing key leaves parser defaults for the refresh heal to fix.
+  if (result.trades.length > 0) {
+    const etfTypes = await fetchEodhdAssetTypes(
+      result.trades.map((t) => t.ticker),
+    );
+    for (const trade of result.trades) {
+      const detected = etfTypes[trade.ticker];
+      if (detected) trade.asset_type = detected;
+    }
+  }
+
   return NextResponse.json(result);
 }

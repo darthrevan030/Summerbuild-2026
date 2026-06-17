@@ -1,5 +1,6 @@
 import YahooFinanceClass from "yahoo-finance2";
 import { fetchSGXPrices } from "@/lib/providers/sgx";
+import type { AssetType } from "@/types/holding";
 // v3: default export is the class, not an instance
 const yahooFinance = new YahooFinanceClass();
 
@@ -89,6 +90,47 @@ function toEohdSymbol(ticker: string, currency: string): string {
   }
   const exchange = EODHD_EXCHANGE[currency] ?? "US";
   return `${ticker}.${exchange}`;
+}
+
+/**
+ * Classifies tickers as ETFs via EODHD's search API. Returns { ticker: "ETF" }
+ * only for tickers EODHD confidently reports as an ETF — used to upgrade
+ * broker-statement imports that lack an asset descriptor (e.g. DBS Vickers
+ * contract notes) without a hardcoded ticker list. Mirrors the refresh-time
+ * heal's safety rule: EODHD reports REITs as "Common Stock", so we only ever
+ * detect ETFs and never downgrade toward "Equity" — a REIT/Bond/etc. is never
+ * mislabelled. No-ops (returns {}) when EODHD is unconfigured or on any error,
+ * leaving the parser's default in place for the refresh-time heal to fix.
+ */
+export async function fetchEodhdAssetTypes(
+  tickers: string[],
+): Promise<Record<string, AssetType>> {
+  const key = process.env.EODHD_API_KEY;
+  const unique = [...new Set(tickers.filter((t) => t && t !== "—"))];
+  if (!key || unique.length === 0) return {};
+
+  const out: Record<string, AssetType> = {};
+  await Promise.all(
+    unique.map(async (ticker) => {
+      try {
+        const res = await fetch(
+          `https://eodhd.com/api/search/${encodeURIComponent(ticker)}` +
+            `?api_token=${key}&fmt=json&limit=10`,
+        );
+        if (!res.ok) return;
+        const hits = await res.json();
+        if (!Array.isArray(hits)) return;
+        // Match the exact ticker; skip if no clean match rather than guess.
+        const hit = hits.find(
+          (h) => String(h?.Code ?? "").toUpperCase() === ticker.toUpperCase(),
+        );
+        if (hit && String(hit.Type) === "ETF") out[ticker] = "ETF";
+      } catch {
+        // ignore — fall back to the parser default + the refresh-time heal
+      }
+    }),
+  );
+  return out;
 }
 
 /**
@@ -299,20 +341,41 @@ export async function fetchLivePrices(
   return results;
 }
 
+export interface TickerMeta {
+  // Authoritative listing currency, or "GBp" for pence-quoted UK lines (passed
+  // through unchanged; the caller decides to ignore it — price is in pence, not
+  // pounds, so it must NOT be treated as "GBP").
+  currency?: string;
+  // Set ONLY when Yahoo reports a heal-safe asset type (see mapYahooQuoteType).
+  assetType?: AssetType;
+}
+
 /**
- * Looks up each ticker's authoritative listing currency via Yahoo Finance.
- * Used to detect (and later repair) instruments whose stored currency was
- * guessed from the exchange — e.g. a USD-denominated ETF listed on the LSE
- * being wrongly tracked as GBP. Crypto and gold are USD by app convention and
- * are skipped. Returns { ticker: currencyCode } only for tickers Yahoo reports
- * a currency for. Pence-quoted UK lines come back as "GBp"; that is passed
- * through unchanged so the caller can decide to ignore it (price is in pence,
- * not pounds, so it must NOT be treated as "GBP").
+ * Maps Yahoo's `quoteType` to our `AssetType`, but ONLY for values that are
+ * unambiguous and safe to auto-heal toward. Yahoo classifies REITs as
+ * "EQUITY", and Gold/RE/Bond/T-Bill are app conventions Yahoo doesn't model —
+ * so the only direction we ever trust enough to overwrite stored data is
+ * "ETF". Yahoo's "ETF" is authoritative (an ETF is never a stock or REIT);
+ * healing toward "Equity" would clobber a correctly-categorised REIT, so we
+ * deliberately never do it. Everything else returns undefined (no heal).
  */
-export async function fetchTickerCurrencies(
+function mapYahooQuoteType(quoteType: unknown): AssetType | undefined {
+  return quoteType === "ETF" ? "ETF" : undefined;
+}
+
+/**
+ * Looks up each ticker's authoritative listing currency AND asset type via
+ * Yahoo Finance in a single batched quote call. Used to detect (and later
+ * repair) instruments whose stored fields were guessed/defaulted at import —
+ * e.g. a USD-denominated ETF listed on the LSE wrongly tracked as GBP, or an
+ * ETF defaulted to "Equity" by a broker-statement parser. Crypto and gold are
+ * USD by app convention and are skipped. Returns an entry only for tickers
+ * Yahoo answers for; each field is present only when Yahoo reports it.
+ */
+export async function fetchTickerMeta(
   tickers: string[],
   tickerCurrency: Record<string, string> = {},
-): Promise<Record<string, string>> {
+): Promise<Record<string, TickerMeta>> {
   const equities = tickers.filter((t) => !CRYPTO_IDS[t] && !GOLD_TICKERS.has(t));
   if (equities.length === 0) return {};
 
@@ -324,7 +387,7 @@ export async function fetchTickerCurrencies(
     symbols.push(sym);
   }
 
-  const out: Record<string, string> = {};
+  const out: Record<string, TickerMeta> = {};
   try {
     const quotes = await yahooFinance.quote(
       symbols,
@@ -334,11 +397,15 @@ export async function fetchTickerCurrencies(
     const arr = Array.isArray(quotes) ? quotes : [quotes];
     for (const q of arr) {
       const ticker = symbolToTicker[q.symbol];
-      if (ticker && typeof q.currency === "string" && q.currency)
-        out[ticker] = q.currency;
+      if (!ticker) continue;
+      const meta: TickerMeta = {};
+      if (typeof q.currency === "string" && q.currency) meta.currency = q.currency;
+      const assetType = mapYahooQuoteType(q.quoteType);
+      if (assetType) meta.assetType = assetType;
+      out[ticker] = meta;
     }
   } catch (e) {
-    console.warn("[fetchTickerCurrencies] Yahoo error:", e);
+    console.warn("[fetchTickerMeta] Yahoo error:", e);
   }
   return out;
 }
