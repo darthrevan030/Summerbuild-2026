@@ -88,6 +88,18 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
+
+  // Supabase falls back to the Site URL when the app's /auth/callback isn't in
+  // the allowed redirect list — the OAuth code lands on /?code=... instead of
+  // /auth/callback?code=... Forward it so the exchange still completes.
+  if (pathname === "/" && request.nextUrl.searchParams.has("code")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    const redirect = NextResponse.redirect(url);
+    applySecurityHeaders(redirect, nonce);
+    return redirect;
+  }
+
   const isAuthPath =
     pathname.startsWith("/login") || pathname.startsWith("/auth");
   // The marketing landing page is public for signed-out visitors only.
