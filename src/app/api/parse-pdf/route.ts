@@ -37,10 +37,29 @@ export async function POST(req: NextRequest) {
 
   if (isPdf) {
     try {
-      const { PDFParse } = await import("pdf-parse");
-      const parser = new PDFParse({ data: new Uint8Array(buffer) });
-      const result = await parser.getText();
-      pdfText = result.text as string;
+      // pdfjs-dist legacy build has no native dependencies — works on Vercel.
+      // pdf-parse v2 pulls in @napi-rs/canvas (native binary) which fails on
+      // Linux serverless because only the Windows binary was installed locally.
+      const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+      const doc = await pdfjsLib.getDocument({
+        data: new Uint8Array(buffer),
+        disableFontFace: true,
+        verbosity: 0,
+      }).promise;
+      const pageTexts: string[] = [];
+      for (let i = 1; i <= doc.numPages; i++) {
+        const page = await doc.getPage(i);
+        const content = await page.getTextContent();
+        pageTexts.push(
+          content.items
+            .map((item) => ("str" in item ? (item as { str: string }).str : ""))
+            .join(" "),
+        );
+        page.cleanup();
+      }
+      await doc.destroy();
+      pdfText = pageTexts.join("\n");
     } catch (err) {
       console.error("[parse-pdf] PDF parsing failed:", err);
       return NextResponse.json(
